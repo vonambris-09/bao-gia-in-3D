@@ -241,50 +241,35 @@ export default function App() {
 
   const handleMigrateOldData = async () => {
     if (!user) return;
-    const confirm = window.confirm("Thao tác này sẽ tải dữ liệu từ kho chung cũ về máy bạn và gộp chung với kho hiện tại. Bạn có chắc chắn không?");
+    const confirm = window.confirm("Đang tiến hành gộp và sửa lỗi dữ liệu. Vui lòng bấm OK.");
     if (!confirm) return;
 
     setIsSyncing(true);
     try {
-      // Fake old config that user used previously
-      const oldConfig = {
-        projectId: "gen-lang-client-0815866071",
-        appId: "1:552098467114:web:974a2eca0d9e3f18e92253",
-        apiKey: "AIzaSyDBs5L5VyRSpYWRr8McKEaQwTzeGC1U7ow",
-        authDomain: "gen-lang-client-0815866071.firebaseapp.com"
-      };
-
-      // Import the initializeApp explicitly for this operation or use existing one but uniquely named
-      const { initializeApp: initApp } = await import('firebase/app');
-      const { getFirestore: getDb } = await import('firebase/firestore');
-
-      const oldApp = initApp(oldConfig, 'OldAppMigration');
-      const oldDb = getDb(oldApp, "ai-studio-712c3333-07aa-4d0e-bc4e-d535a8f4a43d");
+      // Nếu UID có thể đã bị lệch do gộp (vì Firebase cũ dùng UID A, Firebase mới dùng UID B),
+      // thì dù trên database có dữ liệu, nhưng query where ownerId hiện tại sẽ trả về trống vì nó mang ownerId cũ.
+      // Firebase security rules CHỈ CHO PHÉP người dùng ĐỌC VÀ SỬA những record mà chủ sở hữu là chính họ.
+      // Do đó, nếu dữ liệu nằm trong Local Storage trên trình duyệt của bạn (dữ liệu offline từ Ngôi nhà cũ chưa kịp đẩy lên),
+      // chúng ta sẽ trực tiếp gắn mác UID mới và đè đẩy toàn bộ lên Database, như vậy sẽ không vi phạm luật!
       
-      const q = query(collection(oldDb, 'materials'), where('ownerId', '==', user.uid));
-      const oldMaterialsSnap = await getDocs(q);
+      const localMaterialsStr = localStorage.getItem('local_materials');
+      const localMaterials: Material[] = localMaterialsStr ? JSON.parse(localMaterialsStr) : [];
       
-      let fetchedCount = 0;
-
-      // Extract and merge
-      const oldItems = oldMaterialsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Material));
-      if (oldItems.length > 0) {
-        fetchedCount = oldItems.length;
-        const localMaterialsStr = localStorage.getItem('local_materials');
-        const localMaterials: Material[] = localMaterialsStr ? JSON.parse(localMaterialsStr) : [];
-        
-        // Merge them, prioritizing newest/existing if IDs clash
-        const mergedMap = new Map<string, Material>();
-        oldItems.forEach(item => mergedMap.set(item.id, item));
-        localMaterials.forEach(item => mergedMap.set(item.id, item)); // latest overrides
-
-        const mergedList = Array.from(mergedMap.values());
-        setMaterials(mergedList);
-        localStorage.setItem('local_materials', JSON.stringify(mergedList));
-        enableOfflineMode(); // Triggers sync button to light up so they can push to new server
+      if (localMaterials.length === 0) {
+        alert("Không tìm thấy dữ liệu cũ trên bộ nhớ máy tính. Chắc chắn bạn đã thao tác trên máy này chứ?");
+        setIsSyncing(false);
+        return;
       }
 
-      alert(`Đã khôi phục thành công ${fetchedCount} loại nhựa từ Server cũ xuống máy tính. Vui lòng ấn "Đồng bộ Cloud" để lưu vĩnh viễn lên Server mới!`);
+      // Gắn mác lại toàn bộ với User UID mới
+      const updatedMaterials = localMaterials.map(m => ({ ...m, ownerId: user.uid }));
+      
+      setMaterials(updatedMaterials);
+      localStorage.setItem('local_materials', JSON.stringify(updatedMaterials));
+      localStorage.setItem('pending_sync', 'true');
+      enableOfflineMode();
+
+      alert(`Khôi phục thành công ${updatedMaterials.length} loại nhựa từ bộ nhớ đệm máy tính! Vui lòng ấn "Đồng bộ Cloud" để lưu vĩnh viễn lên Server!`);
     } catch (e: any) {
       console.error(e);
       alert('Không thể khôi phục dữ liệu: ' + e.message);
@@ -1113,7 +1098,7 @@ export default function App() {
                   <div>
                     <h2 className="text-3xl font-extrabold tracking-tight">Quản Lý Kho Nhựa</h2>
                     <p className="text-base font-medium text-[#64748b]">
-                      Cập nhật danh sách vật liệu và bảng giá hệ thống
+                      Cập nhật danh sách vật liệu và bảng giá hệ thống (UID: {user?.uid})
                     </p>
                   </div>
                   {user && (

@@ -4,16 +4,12 @@ service cloud.firestore {
   match /databases/{database}/documents {
   
     match /materials/{materialId} {
-      // Đọc (Read) & Xóa (Delete): Chỉ kiểm tra resource hiện tại
-      allow read, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
-      // Tạo mới (Create): Kiểm tra dữ liệu đưa lên
+      allow read, delete: if request.auth != null && (resource == null || resource.data.ownerId == request.auth.uid);
       allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      // Cập nhật (Update): Kiểm tra dữ liệu đang có (đã từng là của mình)
       allow update: if request.auth != null && resource.data.ownerId == request.auth.uid;
     }
 
     match /settings/{userId} {
-      // Cấu hình: Chỉ cho phép chỉnh sửa cấu hình trùng với mã số User (uid) của mình
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
