@@ -1066,69 +1066,80 @@ export default function App() {
                           </button>
                         </div>
                         <div className="p-4 space-y-3">
-                           <div>
-                              <div className="flex gap-1 items-center mt-1">
-                                <select 
-                                  value={m.category || 'PLA'}
-                                  onChange={(e) => handleMaterialUpdate(m.id, { category: e.target.value })}
-                                  className="text-[11px] font-black bg-[#e2e8f0] text-[#1e293b] px-1.5 py-0.5 rounded uppercase tracking-tighter"
-                                >
-                                  {['PLA', 'PETG', 'PETG-CF', 'ABS', 'ASA', 'TPU'].map(cat => (
-                                    <option key={cat} value={cat}>{cat}</option>
-                                  ))}
-                                </select>
-                                <div className="flex flex-col gap-1 flex-1">
-                                  <label className="text-[10px] font-bold text-[#64748b] uppercase px-1">Hãng</label>
-                                  <input 
-                                    defaultValue={m.brand} 
-                                    onBlur={(e) => handleMaterialUpdate(m.id, { brand: e.target.value })}
-                                    placeholder="Hãng"
-                                    className="w-full text-xs font-bold text-[#1e293b] bg-white border border-[#e2e8f0] px-2 py-1.5 rounded-lg outline-none focus:ring-1 focus:ring-[#2563eb]"
-                                  />
-                                </div>
-                                <div className="flex flex-col gap-1 flex-1">
-                                  <label className="text-[10px] font-bold text-[#64748b] uppercase px-1 text-right">Màu</label>
-                                  <input 
-                                    defaultValue={m.color} 
-                                    onBlur={(e) => handleMaterialUpdate(m.id, { color: e.target.value })}
-                                    placeholder="Màu sắc"
-                                    className="w-full text-xs font-bold text-[#2563eb] bg-white border border-[#e2e8f0] px-2 py-1.5 rounded-lg outline-none focus:ring-1 focus:ring-[#2563eb] text-right"
-                                  />
-                                </div>
-                              </div>
+                           {/* Row 1: Category & Brand */}
+                           <div className="flex gap-2">
+                             <div className="shrink-0">
+                               <label className="text-[10px] font-bold text-[#64748b] uppercase block mb-1">Loại</label>
+                               <select 
+                                 value={m.category || 'PLA'}
+                                 onChange={(e) => handleMaterialUpdate(m.id, { category: e.target.value })}
+                                 className="h-9 text-xs font-black bg-[#f1f5f9] text-[#1e293b] px-2 rounded-lg border border-[#e2e8f0] outline-none focus:ring-1 focus:ring-[#2563eb] uppercase cursor-pointer"
+                               >
+                                 {['PLA', 'PETG', 'PETG-CF', 'ABS', 'ASA', 'TPU'].map(cat => (
+                                   <option key={cat} value={cat}>{cat}</option>
+                                 ))}
+                               </select>
+                             </div>
+                             <div className="flex-1">
+                               <label className="text-[10px] font-bold text-[#64748b] uppercase block mb-1">Hãng</label>
+                               <input 
+                                 defaultValue={m.brand} 
+                                 onBlur={(e) => handleMaterialUpdate(m.id, { brand: e.target.value })}
+                                 placeholder="Nhập hãng nhựa..."
+                                 className="w-full h-9 text-xs font-bold text-[#1e293b] bg-white border border-[#e2e8f0] px-3 rounded-lg outline-none focus:ring-1 focus:ring-[#2563eb]"
+                               />
+                             </div>
                            </div>
-                           <div className="flex justify-between items-end gap-2">
-                              <div className="flex-1">
-                                <label className="text-[10px] font-extrabold uppercase text-[#64748b] block mb-0.5">Giá / KG</label>
-                                <input 
-                                  type="number"
-                                  defaultValue={m.pricePerKg} 
-                                  onBlur={(e) => handleMaterialUpdate(m.id, { pricePerKg: Number(e.target.value) })}
-                                  className="w-full bg-white border border-[#e2e8f0] rounded-lg px-2 py-1 text-sm font-bold text-[#2563eb]"
-                                />
-                              </div>
-                              <div className="flex flex-col gap-1 items-center">
-                                <label className="text-[10px] font-extrabold uppercase text-[#64748b]">Tổn</label>
-                                <button
-                                  onClick={() => handleMaterialUpdate(m.id, { inStock: !(m.inStock ?? true) })}
-                                  className={cn(
-                                    "w-8 h-8 rounded-lg flex items-center justify-center transition-all border shadow-sm active:scale-90",
-                                    (m.inStock ?? true) 
-                                      ? "bg-emerald-500 text-white border-emerald-400" 
-                                      : "bg-red-500 text-white border-red-400"
-                                  )}
-                                  title={(m.inStock ?? true) ? "Còn hàng - Click để cập nhật hết hàng" : "Hết hàng - Click để cập nhật còn hàng"}
-                                >
-                                  {(m.inStock ?? true) ? <Check size={14} strokeWidth={3} /> : <X size={14} strokeWidth={3} />}
-                                </button>
-                              </div>
-                              <div className="w-10 h-10 rounded-xl relative border border-[#e2e8f0] overflow-hidden" style={{ backgroundColor: m.colorHex }}>
-                                 <input 
-                                   type="color" value={m.colorHex} 
-                                   onChange={(e) => handleMaterialUpdate(m.id, { colorHex: e.target.value })}
-                                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                 />
-                              </div>
+
+                           {/* Row 2: Color Name & Hex Picker */}
+                           <div className="flex gap-2">
+                             <div className="flex-1">
+                               <label className="text-[10px] font-bold text-[#64748b] uppercase block mb-1">Màu sắc</label>
+                               <input 
+                                 defaultValue={m.color} 
+                                 onBlur={(e) => handleMaterialUpdate(m.id, { color: e.target.value })}
+                                 placeholder="Nhập tên màu..."
+                                 className="w-full h-9 text-xs font-bold text-[#2563eb] bg-white border border-[#e2e8f0] px-3 rounded-lg outline-none focus:ring-1 focus:ring-[#2563eb]"
+                               />
+                             </div>
+                             <div className="shrink-0">
+                               <label className="text-[10px] font-bold text-[#64748b] uppercase block mb-1">Mã</label>
+                               <div className="w-9 h-9 rounded-lg relative border border-[#e2e8f0] overflow-hidden shadow-sm" style={{ backgroundColor: m.colorHex }}>
+                                  <input 
+                                    type="color" value={m.colorHex} 
+                                    onChange={(e) => handleMaterialUpdate(m.id, { colorHex: e.target.value })}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                  />
+                               </div>
+                             </div>
+                           </div>
+
+                           {/* Row 3: Price & Stock */}
+                           <div className="flex gap-2 items-end pt-1">
+                             <div className="flex-1">
+                               <label className="text-[10px] font-extrabold uppercase text-[#64748b] block mb-1">Giá / KG (VNĐ)</label>
+                               <input 
+                                 type="number"
+                                 defaultValue={m.pricePerKg} 
+                                 onBlur={(e) => handleMaterialUpdate(m.id, { pricePerKg: Number(e.target.value) })}
+                                 className="w-full h-9 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg px-3 text-sm font-bold text-[#2563eb] outline-none focus:ring-1 focus:ring-[#2563eb]"
+                               />
+                             </div>
+                             <div className="shrink-0 flex flex-col items-center">
+                               <label className="text-[10px] font-extrabold uppercase text-[#64748b] block mb-1">Tồn</label>
+                               <button
+                                 onClick={() => handleMaterialUpdate(m.id, { inStock: !(m.inStock ?? true) })}
+                                 className={cn(
+                                   "w-9 h-9 rounded-lg flex items-center justify-center transition-all border shadow-sm active:scale-90",
+                                   (m.inStock ?? true) 
+                                     ? "bg-emerald-500 text-white border-emerald-400" 
+                                     : "bg-red-500 text-white border-red-400"
+                                 )}
+                                 title={(m.inStock ?? true) ? "Còn hàng" : "Hết hàng"}
+                               >
+                                 {(m.inStock ?? true) ? <Check size={16} strokeWidth={3} /> : <X size={16} strokeWidth={3} />}
+                               </button>
+                             </div>
                            </div>
                         </div>
                       </div>
