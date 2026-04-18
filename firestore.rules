@@ -4,13 +4,12 @@ service cloud.firestore {
   match /databases/{database}/documents {
   
     match /materials/{materialId} {
-      allow read, delete: if request.auth != null && (resource == null || resource.data.ownerId == request.auth.uid);
-      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      // Tạm thời mở khoá toàn bộ cho phép ghi đè mọi document miễn là có đăng nhập
+      allow read, write: if request.auth != null;
     }
 
     match /settings/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth != null;
     }
 
     match /test/connection {
