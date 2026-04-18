@@ -54,21 +54,11 @@ service cloud.firestore {
 
     // Materials Collection
     match /materials/{materialId} {
-      allow get: if isOwner(existing().ownerId);
+      allow get: if isSignedIn() && resource.data.ownerId == request.auth.uid;
       allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
-      
-      allow create: if isSignedIn() 
-                    && isValidMaterial(incoming());
-      
-      allow update: if isSignedIn() 
-                    && isValidMaterial(incoming())
-                    && incoming().ownerId == existing().ownerId
-                    && (
-                      // Allow updating all mutable fields
-                      incoming().diff(existing()).affectedKeys().hasOnly(['name', 'brand', 'pricePerKg', 'color', 'colorHex', 'category', 'inStock', 'imageUrl', 'updatedAt', 'id'])
-                    );
-      
-      allow delete: if isOwner(existing().ownerId);
+      allow create: if isSignedIn() && incoming().ownerId == request.auth.uid;
+      allow update: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
     }
 
     // Settings Collection

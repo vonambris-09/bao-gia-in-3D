@@ -136,11 +136,16 @@ export default function App() {
     }
     const q = query(
       collection(db, 'materials'), 
-      where('ownerId', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('ownerId', '==', user.uid)
     );
     return onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Material));
+      const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Material))
+        .sort((a, b) => {
+          // If createdAt is pending (no seconds), assume it's "now" so new items stay at the top
+          const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : Date.now();
+          const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : Date.now();
+          return timeB - timeA;
+        });
       setMaterials(items);
       
       // Auto-select if nothing is selected or if current selection is invalid
@@ -152,6 +157,9 @@ export default function App() {
         }
         return p;
       });
+    }, (error) => {
+      console.error("Firestore sync error:", error);
+      alert(`Dữ liệu kho nhựa bị gián đoạn. Không thể tải: ${error.message}`);
     });
   }, [user, quoteCategory]);
 
@@ -322,7 +330,10 @@ export default function App() {
         ...updates,
         updatedAt: serverTimestamp()
       }, { merge: true });
-    } catch (e) {
+      console.log('Material updated successfully:', id);
+    } catch (e: any) {
+      console.error('Update material failed', e);
+      alert(`Lỗi khi cập nhật nhựa: ${e.message || 'Không xác định'}`);
       handleFirestoreError(e, 'update', `materials/${id}`);
     }
   };
