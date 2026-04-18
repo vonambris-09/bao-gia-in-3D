@@ -337,8 +337,8 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen bg-[#f8fafc] text-[#1e293b] font-sans selection:bg-[#2563eb]/20 flex flex-col overflow-hidden">
-      <div className="flex-1 flex flex-col max-w-[1600px] mx-auto w-full border-x border-[#e2e8f0]/40 shadow-2xl bg-white shadow-slate-200 overflow-hidden">
+    <div className="min-h-screen bg-[#f8fafc] text-[#1e293b] font-sans selection:bg-[#2563eb]/20 flex flex-col">
+      <div className="flex-1 flex flex-col max-w-[1600px] mx-auto w-full border-x border-[#e2e8f0]/40 shadow-2xl bg-white shadow-slate-200">
         {/* Bento Header */}
       <header className="h-[60px] px-8 border-b border-[#e2e8f0] bg-white flex justify-between items-center shrink-0">
         <div className="flex items-center gap-2">
@@ -403,11 +403,11 @@ export default function App() {
         </nav>
       </header>
         
-      <main className="flex-1 overflow-hidden p-4 grid grid-cols-[320px_1fr_280px] gap-4">
+      <main className="flex-1 p-4 grid grid-cols-[320px_1fr_300px] gap-4">
         {activeTab === 'quote' ? (
           <>
             {/* Column 1: Inputs */}
-            <div className="flex flex-col gap-4 overflow-y-auto pr-1">
+            <div className="flex flex-col gap-4 pr-1">
               {/* HE THONG Section */}
               <div className="bg-white rounded-2xl p-5 border border-[#e2e8f0] shadow-sm">
                 <div className="flex items-center gap-2 mb-5 text-[#64748b]">
@@ -602,8 +602,8 @@ export default function App() {
             </div>
 
             {/* Column 2: Center Display */}
-            <div className="overflow-y-auto no-scrollbar">
-              <main ref={quoteRef} className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] flex flex-col min-h-full">
+            <div className="">
+              <main ref={quoteRef} className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] flex flex-col">
                 <div className="p-8 border-b border-[#e2e8f0] flex justify-between items-center bg-[#fdfdfd]">
                   <div>
                     <p className="text-[11px] font-black text-[#64748b] uppercase tracking-[0.3em] mb-1">NSHOP DIGITAL FABRICATION</p>
@@ -772,7 +772,7 @@ export default function App() {
             </div>
 
             {/* Column 3: Quick Reference / Inventory List */}
-            <div className="flex flex-col gap-4 overflow-hidden pl-1 max-h-full">
+            <div className="sticky top-4 self-start flex flex-col gap-4 pl-1 h-[calc(100vh-140px)]">
               <div className="bg-white rounded-2xl p-5 border border-[#e2e8f0] shadow-sm flex flex-col h-full overflow-hidden">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2 text-[#64748b]">
