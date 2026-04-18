@@ -338,7 +338,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-[#1e293b] font-sans selection:bg-[#2563eb]/20 flex flex-col">
-      {/* Bento Header */}
+      <div className="flex-1 flex flex-col max-w-[1600px] mx-auto w-full border-x border-[#e2e8f0]/40 shadow-2xl bg-white shadow-slate-200">
+        {/* Bento Header */}
       <header className="h-[60px] px-8 border-b border-[#e2e8f0] bg-white flex justify-between items-center shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-[#2563eb] rounded-lg flex items-center justify-center text-white">
@@ -996,6 +997,8 @@ export default function App() {
       <footer className="h-10 bg-[#1e293b] flex items-center justify-center shrink-0 leading-none">
         <p className="text-[10px] text-white/40 font-bold uppercase tracking-[0.5em]">NSHOPVN • PREMIUM 3D PRINTING SERVICE</p>
       </footer>
+
+      </div>
 
       {/* Showroom Overlay */}
       <AnimatePresence>
