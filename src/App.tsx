@@ -88,7 +88,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'quote' | 'inventory'>('quote');
   const [showShowroom, setShowShowroom] = useState(false);
   const [showroomCategory, setShowroomCategory] = useState('PLA');
-  const [quoteCategory, setQuoteCategory] = useState('PLA');
+  const [quoteCategory, setQuoteCategory] = useState(() => {
+    return localStorage.getItem('lastQuoteCategory') || 'PLA';
+  });
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -164,17 +166,36 @@ export default function App() {
     }
   };
 
-  // State for Quote Parameters
-  const [params, setParams] = useState<QuoteParams>({
-    materialId: materials[0]?.id || '',
-    hours: 10,
-    minutes: 14,
-    weightG: 394,
-    infillPercent: 20,
-    layerHeightMm: 0.2,
-    extraFee: 10000,
-    note: '67UYHXF',
+  // State for Quote Parameters with Persistence
+  const [params, setParams] = useState<QuoteParams>(() => {
+    const saved = localStorage.getItem('lastQuoteParams');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse saved params', e);
+      }
+    }
+    return {
+      materialId: '',
+      hours: 10,
+      minutes: 14,
+      weightG: 394,
+      infillPercent: 20,
+      layerHeightMm: 0.2,
+      extraFee: 10000,
+      note: '67UYHXF',
+    };
   });
+
+  // Save params and category to localStorage on change
+  useEffect(() => {
+    localStorage.setItem('lastQuoteParams', JSON.stringify(params));
+  }, [params]);
+
+  useEffect(() => {
+    localStorage.setItem('lastQuoteCategory', quoteCategory);
+  }, [quoteCategory]);
 
   const selectedMaterial = materials.find(m => m.id === params.materialId);
 
@@ -522,6 +543,18 @@ export default function App() {
                       />
                     </div>
                     <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-[#1e293b] px-1">Layer (mm)</label>
+                      <select 
+                        value={params.layerHeightMm}
+                        onChange={(e) => setParams({ ...params, layerHeightMm: Number(e.target.value) })}
+                        className="w-full bg-[#fdfdfd] border border-[#e2e8f0] rounded-xl px-4 py-2.5 text-sm font-semibold focus:ring-1 focus:ring-[#2563eb] outline-none"
+                      >
+                        {[0.1, 0.12, 0.16, 0.2, 0.24, 0.28, 0.3, 0.4].map(lh => (
+                          <option key={lh} value={lh}>{lh}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
                       <label className="text-xs font-bold text-[#1e293b] px-1">Infill (%)</label>
                       <input 
                         type="number"
@@ -593,27 +626,31 @@ export default function App() {
                     <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-5">
                       <div className="flex items-center gap-2 mb-4 text-[#2563eb]">
                         <Info size={14} />
-                        <h3 className="text-xs font-extrabold uppercase tracking-widest">Thông Số Preview</h3>
+                        <h3 className="text-xs font-extrabold uppercase tracking-widest">Thông số sản phẩm</h3>
                       </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-5 text-sm">
+                        <div className="col-span-2 border-b border-[#e2e8f0] pb-3 mb-1">
                           <p className="text-xs font-bold text-[#64748b] uppercase mb-0.5">Vật liệu</p>
-                          <p className="font-bold">{selectedMaterial?.category || '---'} {selectedMaterial?.brand}</p>
+                          <p className="font-bold text-base">{selectedMaterial?.category || '---'} {selectedMaterial?.brand}</p>
                         </div>
-                        <div className="text-right">
+                        <div>
                           <p className="text-xs font-bold text-[#64748b] uppercase mb-0.5">Khối lượng</p>
                           <p className="font-bold text-[#22c55e]">{params.weightG}G</p>
                         </div>
-                        <div>
+                        <div className="text-right">
                           <p className="text-xs font-bold text-[#64748b] uppercase mb-0.5">Màu sắc</p>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 justify-end">
                              <div className="w-4 h-4 rounded-full border border-black/5" style={{ backgroundColor: selectedMaterial?.colorHex }} />
                              <span className="font-bold">{selectedMaterial?.color || '---'}</span>
                           </div>
                         </div>
+                        <div>
+                          <p className="text-xs font-bold text-[#64748b] uppercase mb-0.5">Chiều cao Layer</p>
+                          <p className="font-bold">{params.layerHeightMm} mm</p>
+                        </div>
                         <div className="text-right">
-                          <p className="text-xs font-bold text-[#64748b] uppercase mb-0.5">Thời gian in</p>
-                          <p className="font-bold">{params.hours}h {params.minutes}m</p>
+                          <p className="text-xs font-bold text-[#64748b] uppercase mb-0.5">Độ dày Infill</p>
+                          <p className="font-bold">{params.infillPercent}%</p>
                         </div>
                       </div>
                     </div>
@@ -703,7 +740,8 @@ export default function App() {
                       <div className="space-y-4">
                          <div>
                             <p className="text-xs font-bold text-[#64748b] uppercase tracking-wider">Thông tin chuyển khoản</p>
-                            <p className="text-xs font-bold uppercase tracking-tight text-[#2563eb]">CTK: VO THANH NAM • NGÂN HÀNG OCB</p>
+                            <p className="text-xs font-bold uppercase tracking-tight text-[#2563eb]">NGÂN HÀNG OCB</p>
+                            <p className="text-xs font-bold uppercase tracking-tight text-[#64748b]">CTK: VO THANH NAM</p>
                             <p className="text-xs font-bold text-[#64748b]">STK: 0344970774</p>
                           </div>
                           <div>
@@ -722,9 +760,9 @@ export default function App() {
                        </div>
                        <button 
                          onClick={handleExportPDF}
-                         className="flex items-center gap-2 px-6 py-3 bg-[#22c55e] text-white text-base font-black rounded-2xl shadow-lg hover:bg-emerald-600 transition-all hover:scale-105 active:scale-95"
+                         className="flex items-center gap-2 px-5 py-2 bg-[#22c55e] text-white text-sm font-black rounded-xl shadow-md hover:bg-emerald-600 transition-all hover:scale-105 active:scale-95"
                        >
-                         <Printer size={18} /> XUẤT BÁO GIÁ PDF
+                         <Printer size={16} /> XUẤT BÁO GIÁ PDF
                        </button>
                     </div>
                   </div>
