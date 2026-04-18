@@ -622,14 +622,14 @@ export default function App() {
 
                         <div className="p-8 space-y-8 flex-1">
                   {/* Top Info Grid */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-[1fr_180px] gap-4">
                     <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-5">
                       <div className="flex items-center gap-2 mb-4 text-[#2563eb]">
                         <Info size={14} />
                         <h3 className="text-xs font-extrabold uppercase tracking-widest">Thông số sản phẩm</h3>
                       </div>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-5 text-sm">
-                        <div className="col-span-2 border-b border-[#e2e8f0] pb-3 mb-1">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
+                        <div className="col-span-2 border-b border-[#e2e8f0] pb-2 mb-0.5">
                           <p className="text-xs font-bold text-[#64748b] uppercase mb-0.5">Vật liệu</p>
                           <p className="font-bold text-base">{selectedMaterial?.category || '---'} {selectedMaterial?.brand}</p>
                         </div>
@@ -655,7 +655,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="bg-white border border-[#e2e8f0] rounded-2xl overflow-hidden flex items-center justify-center shadow-sm min-h-[160px]">
+                    <div className="bg-white border border-[#e2e8f0] rounded-2xl overflow-hidden flex items-center justify-center shadow-sm h-full max-h-[220px]">
                       {selectedMaterial?.imageUrl ? (
                         <img 
                           src={selectedMaterial.imageUrl} 
