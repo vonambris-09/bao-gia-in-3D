@@ -779,7 +779,7 @@ export default function App() {
                     </div>
 
                     <div className="text-right flex flex-col items-end gap-3 min-w-[280px]">
-                       <div className="bg-[#22c55e] border border-[#22c55e]/20 rounded-3xl p-7 w-full text-left shadow-xl shadow-emerald-100">
+                       <div className="bg-[#822fbd] border border-[#822fbd]/20 rounded-3xl p-7 w-full text-left shadow-xl shadow-purple-200/50">
                           <p className="text-[11px] font-black text-white/80 uppercase tracking-[0.3em] mb-2">TỔNG THANH TOÁN</p>
                           <div className="text-5xl font-black tracking-tighter text-white">
                             {results.customerTotal.toLocaleString()} <span className="text-lg font-bold opacity-60">VND</span>

@@ -28,6 +28,7 @@
         "machinePowerW": { "type": "number" },
         "electricityPriceKwh": { "type": "number" },
         "depreciationPerHour": { "type": "number" },
+        "serviceNotes": { "type": "string" },
         "ownerId": { "type": "string" }
       },
       "required": ["machinePowerW", "electricityPriceKwh", "depreciationPerHour", "ownerId"]

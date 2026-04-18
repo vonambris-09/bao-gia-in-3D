@@ -48,7 +48,8 @@ service cloud.firestore {
           && data.machinePowerW is number && data.machinePowerW >= 0
           && data.electricityPriceKwh is number && data.electricityPriceKwh >= 0
           && data.depreciationPerHour is number && data.depreciationPerHour >= 0
-          && data.ownerId == request.auth.uid;
+          && data.ownerId == request.auth.uid
+          && (data.get('serviceNotes', '') is string && data.get('serviceNotes', '').size() <= 10000);
     }
 
     // Materials Collection
@@ -81,7 +82,7 @@ service cloud.firestore {
       allow create: if isOwner(userId) && isValidSettings(incoming());
       allow update: if isOwner(userId) 
                     && isValidSettings(incoming())
-                    && incoming().diff(existing()).affectedKeys().hasOnly(['machinePowerW', 'electricityPriceKwh', 'depreciationPerHour']);
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['machinePowerW', 'electricityPriceKwh', 'depreciationPerHour', 'serviceNotes']);
     }
   }
 }
