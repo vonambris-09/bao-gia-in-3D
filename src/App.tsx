@@ -212,7 +212,7 @@ export default function App() {
     const electricityCost = (systemSettings.machinePowerW / 1000) * systemSettings.electricityPriceKwh * totalHours;
     const depreciationCost = systemSettings.depreciationPerHour * totalHours;
     
-    const internalTotal = materialCost + electricityCost + depreciationCost;
+    const internalTotal = Math.round((materialCost + electricityCost + depreciationCost) / 1000) * 1000;
     
     // Custom logic: rounded up to nearest thousand or fixed margin
     // Let's use a 2.2x margin roughly to match screenshot (108k -> 243k)
@@ -626,16 +626,25 @@ export default function App() {
                     <p className="text-[11px] font-black text-[#64748b] uppercase tracking-[0.3em] mb-1">NSHOP DIGITAL FABRICATION</p>
                     <h1 className="text-xl font-extrabold tracking-tight">Xác Nhận Báo Giá</h1>
                   </div>
-                  <button 
-                    onClick={handleExportImage}
-                    title="Sao chép ảnh báo giá"
-                    className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg cursor-pointer hover:scale-105 transition-all",
-                      isCopying ? "bg-[#22c55e]" : "bg-[#2563eb]"
-                    )}
-                  >
-                    {isCopying ? <Check size={18} /> : <Copy size={18} />}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={handleExportPDF}
+                      title="Xuất báo giá PDF"
+                      className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#22c55e] text-white shadow-lg cursor-pointer hover:scale-105 transition-all active:scale-95"
+                    >
+                      <Printer size={18} />
+                    </button>
+                    <button 
+                      onClick={handleExportImage}
+                      title="Sao chép ảnh báo giá"
+                      className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg cursor-pointer hover:scale-105 transition-all active:scale-95",
+                        isCopying ? "bg-[#22c55e]" : "bg-[#2563eb]"
+                      )}
+                    >
+                      {isCopying ? <Check size={18} /> : <Copy size={18} />}
+                    </button>
+                  </div>
                 </div>
 
                         <div className="p-8 space-y-8 flex-1">
@@ -769,19 +778,13 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="text-right flex flex-col items-end gap-3 min-w-[200px]">
-                       <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-4 w-full text-left">
-                          <p className="text-[10px] font-black text-[#2563eb] uppercase tracking-[0.2em] mb-1">TỔNG THANH TOÁN</p>
-                          <div className="text-3xl font-black tracking-tighter text-[#1e293b]">
-                            {results.customerTotal.toLocaleString()} <span className="text-sm font-bold text-[#64748b]">VND</span>
+                    <div className="text-right flex flex-col items-end gap-3 min-w-[280px]">
+                       <div className="bg-[#2563eb] border border-[#2563eb]/20 rounded-3xl p-7 w-full text-left shadow-xl shadow-blue-100">
+                          <p className="text-[11px] font-black text-white/80 uppercase tracking-[0.3em] mb-2">TỔNG THANH TOÁN</p>
+                          <div className="text-5xl font-black tracking-tighter text-white">
+                            {results.customerTotal.toLocaleString()} <span className="text-lg font-bold opacity-60">VND</span>
                           </div>
                        </div>
-                       <button 
-                         onClick={handleExportPDF}
-                         className="flex items-center gap-2 px-5 py-2 bg-[#22c55e] text-white text-sm font-black rounded-xl shadow-md hover:bg-emerald-600 transition-all hover:scale-105 active:scale-95"
-                       >
-                         <Printer size={16} /> XUẤT BÁO GIÁ PDF
-                       </button>
                     </div>
                   </div>
                 </div>
