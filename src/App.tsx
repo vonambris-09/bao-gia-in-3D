@@ -784,7 +784,7 @@ export default function App() {
                   </div>
                 </div>
                 
-                <div className="space-y-3 flex-1 overflow-y-auto no-scrollbar pb-4 pr-1">
+                <div className="space-y-3 max-h-[680px] overflow-y-auto no-scrollbar pb-4 pr-1">
                   {materials.map(m => (
                     <div 
                       key={m.id} 
