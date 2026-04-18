@@ -707,7 +707,7 @@ export default function App() {
                         Đặc tính nhựa {quoteCategory}
                       </h3>
                     </div>
-                    <p className="text-sm font-bold text-[#4c1d95] italic leading-relaxed">
+                    <p className="text-xs font-bold text-[#4c1d95] italic leading-relaxed">
                       {MATERIAL_CHARACTERISTICS[quoteCategory] || 'Chọn loại nhựa để xem đặc tính.'}
                     </p>
                   </div>
