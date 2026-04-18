@@ -240,42 +240,7 @@ export default function App() {
   };
 
   const handleMigrateOldData = async () => {
-    if (!user) return;
-    const confirm = window.confirm("Đang tiến hành gộp và sửa lỗi dữ liệu. Vui lòng bấm OK.");
-    if (!confirm) return;
-
-    setIsSyncing(true);
-    try {
-      // Nếu UID có thể đã bị lệch do gộp (vì Firebase cũ dùng UID A, Firebase mới dùng UID B),
-      // thì dù trên database có dữ liệu, nhưng query where ownerId hiện tại sẽ trả về trống vì nó mang ownerId cũ.
-      // Firebase security rules CHỈ CHO PHÉP người dùng ĐỌC VÀ SỬA những record mà chủ sở hữu là chính họ.
-      // Do đó, nếu dữ liệu nằm trong Local Storage trên trình duyệt của bạn (dữ liệu offline từ Ngôi nhà cũ chưa kịp đẩy lên),
-      // chúng ta sẽ trực tiếp gắn mác UID mới và đè đẩy toàn bộ lên Database, như vậy sẽ không vi phạm luật!
-      
-      const localMaterialsStr = localStorage.getItem('local_materials');
-      const localMaterials: Material[] = localMaterialsStr ? JSON.parse(localMaterialsStr) : [];
-      
-      if (localMaterials.length === 0) {
-        alert("Không tìm thấy dữ liệu cũ trên bộ nhớ máy tính. Chắc chắn bạn đã thao tác trên máy này chứ?");
-        setIsSyncing(false);
-        return;
-      }
-
-      // Gắn mác lại toàn bộ với User UID mới
-      const updatedMaterials = localMaterials.map(m => ({ ...m, ownerId: user.uid }));
-      
-      setMaterials(updatedMaterials);
-      localStorage.setItem('local_materials', JSON.stringify(updatedMaterials));
-      localStorage.setItem('pending_sync', 'true');
-      enableOfflineMode();
-
-      alert(`Khôi phục thành công ${updatedMaterials.length} loại nhựa từ bộ nhớ đệm máy tính! Vui lòng ấn "Đồng bộ Cloud" để lưu vĩnh viễn lên Server!`);
-    } catch (e: any) {
-      console.error(e);
-      alert('Không thể khôi phục dữ liệu: ' + e.message);
-    } finally {
-      setIsSyncing(false);
-    }
+    // Deleted since migration was successful
   };
 
   const handleSyncToFirebase = async () => {
@@ -1098,32 +1063,23 @@ export default function App() {
                   <div>
                     <h2 className="text-3xl font-extrabold tracking-tight">Quản Lý Kho Nhựa</h2>
                     <p className="text-base font-medium text-[#64748b]">
-                      Cập nhật danh sách vật liệu và bảng giá hệ thống (UID: {user?.uid})
+                      Cập nhật danh sách vật liệu và bảng giá hệ thống
                     </p>
                   </div>
                   {user && (
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={handleMigrateOldData}
-                        className="bg-[#f1f5f9] text-[#1e293b] hover:bg-[#e2e8f0] px-4 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2"
-                        title="Khôi phục dữ liệu từ Firebase Cũ"
-                      >
-                        <Clock size={16} /> Khôi phục
-                      </button>
-                      <button 
-                        onClick={() => handleMaterialAdd({
-                          name: 'Nhựa Mới',
-                          brand: 'No name',
-                          pricePerKg: 300000,
-                          color: 'Chưa đặt màu',
-                          colorHex: '#3b82f6',
-                          inStock: true
-                        })}
-                        className="bg-[#2563eb] text-white px-6 py-2.5 rounded-xl font-bold text-base shadow-md hover:scale-105 transition-all flex items-center gap-2"
-                      >
-                        <Plus size={18} /> Thêm Nhựa
-                      </button>
-                    </div>
+                    <button 
+                      onClick={() => handleMaterialAdd({
+                        name: 'Nhựa Mới',
+                        brand: 'No name',
+                        pricePerKg: 300000,
+                        color: 'Chưa đặt màu',
+                        colorHex: '#3b82f6',
+                        inStock: true
+                      })}
+                      className="bg-[#2563eb] text-white px-6 py-2.5 rounded-xl font-bold text-base shadow-md hover:scale-105 transition-all flex items-center gap-2"
+                    >
+                      <Plus size={18} /> Thêm Nhựa
+                    </button>
                   )}
                 </div>
 
@@ -1214,12 +1170,6 @@ export default function App() {
                           className="bg-white text-[#2563eb] border border-[#2563eb]/20 px-6 py-2.5 rounded-xl font-bold text-sm shadow-md hover:bg-blue-50 transition-all flex items-center gap-2"
                         >
                           <Sparkles size={18} /> Tạo Dữ Liệu Mẫu
-                        </button>
-                        <button 
-                          onClick={handleMigrateOldData}
-                          className="bg-[#1e293b] text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-md hover:bg-slate-800 transition-all flex items-center gap-2"
-                        >
-                          <Clock size={18} /> Khôi phục từ Server cũ
                         </button>
                       </div>
                     </div>
