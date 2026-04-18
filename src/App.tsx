@@ -326,32 +326,38 @@ export default function App() {
           <span className="font-extrabold text-[#2563eb] text-2xl tracking-tighter">PLASTICALC HUB</span>
         </div>
         
-        <nav className="flex items-center gap-8">
+        <nav className="flex items-center gap-3">
           <button 
             onClick={() => setActiveTab('quote')}
             className={cn(
-              "text-base font-bold tracking-tight transition-colors",
-              activeTab === 'quote' ? "text-[#2563eb]" : "text-[#64748b] hover:text-[#1e293b]"
+              "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-extrabold transition-all shadow-md active:scale-95",
+              activeTab === 'quote' 
+                ? "bg-[#2563eb] text-white shadow-blue-200 ring-2 ring-white/20" 
+                : "bg-[#2563eb]/90 text-white/90 hover:bg-[#2563eb] hover:text-white hover:shadow-lg"
             )}
           >
-            Bảng Điều Khiển
+            <Printer size={16} /> Bảng Điều Khiển
           </button>
+          
           <button 
             onClick={() => setActiveTab('inventory')}
             className={cn(
-              "text-base font-bold tracking-tight transition-colors",
-              activeTab === 'inventory' ? "text-[#2563eb]" : "text-[#64748b] hover:text-[#1e293b]"
+              "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-extrabold transition-all shadow-md active:scale-95",
+              activeTab === 'inventory' 
+                ? "bg-[#2563eb] text-white shadow-blue-200 ring-2 ring-white/20" 
+                : "bg-[#2563eb]/90 text-white/90 hover:bg-[#2563eb] hover:text-white hover:shadow-lg"
             )}
           >
-            Nhập Kho Nhựa
+            <Box size={16} /> Nhập Kho Nhựa
           </button>
+          
           <button 
             onClick={() => setShowShowroom(true)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm font-bold text-[#64748b] hover:text-[#2563eb] hover:border-[#2563eb]/30 transition-all"
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#2563eb] text-white rounded-xl text-sm font-extrabold shadow-md hover:bg-blue-600 transition-all active:scale-95"
           >
-            <Eye size={14} /> Showroom
+            <Eye size={16} /> Showroom
           </button>
-          <div className="w-[1px] h-4 bg-[#e2e8f0]" />
+          <div className="w-[1px] h-4 bg-[#e2e8f0] mx-2" />
           {user ? (
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold text-[#64748b] bg-[#f1f5f9] px-2 py-1 rounded-md uppercase tracking-wider">
@@ -612,22 +618,20 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-5">
-                      <div className="flex items-center gap-2 mb-4 text-[#2563eb]">
-                        <Coins size={14} />
-                        <h3 className="text-xs font-extrabold uppercase tracking-widest">Thanh Toán</h3>
-                      </div>
-                      <div className="space-y-1.5 flex flex-col h-full">
-                         <div className="text-[28px] font-black tracking-tighter text-[#1e293b]">
-                           {results.customerTotal.toLocaleString()} <span className="text-base font-bold text-[#64748b]">VND</span>
-                         </div>
-                         <button 
-                           onClick={handleExportPDF}
-                           className="w-full py-2 bg-[#22c55e] text-white text-sm font-bold rounded-xl mt-auto shadow-md hover:bg-emerald-600 transition-colors"
-                         >
-                           Xuất Báo Giá PDF
-                         </button>
-                      </div>
+                    <div className="bg-white border border-[#e2e8f0] rounded-2xl overflow-hidden flex items-center justify-center shadow-sm min-h-[160px]">
+                      {selectedMaterial?.imageUrl ? (
+                        <img 
+                          src={selectedMaterial.imageUrl} 
+                          alt={selectedMaterial.name} 
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 text-[#cbd5e1]">
+                          <Camera size={32} strokeWidth={1.5} />
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-[#94a3b8]">Chưa có hình mẫu</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -685,27 +689,44 @@ export default function App() {
                     )}
                   </div>
 
-                  {/* QR & Bank Section */}
-                  <div className="mt-auto border-t border-[#e2e8f0] pt-8 flex items-center gap-8">
-                     <div className="p-1.5 bg-white border border-[#e2e8f0] rounded-2xl shadow-sm overflow-hidden flex items-center justify-center">
-                        <img 
-                          src={`https://qr.limcorp.vn/qrcode.png?bank=970448&&number=0344970774&amount=${results.customerTotal}&content=${encodeURIComponent(params.note)}`}
-                          alt="Chuyển khoản QR"
-                          className="w-[110px] h-[110px] object-contain"
-                          referrerPolicy="no-referrer"
-                        />
-                     </div>
-                     <div className="space-y-4">
-                        <div>
-                           <p className="text-xs font-bold text-[#64748b] uppercase tracking-wider">Thông tin chuyển khoản</p>
-                           <p className="text-base font-extrabold uppercase tracking-tight text-[#2563eb]">CTK: VO THANH NAM • NGÂN HÀNG OCB</p>
-                           <p className="text-xs font-bold text-[#64748b] mt-1">STK: 0344970774</p>
-                         </div>
+                  {/* QR, Payment & Bank Section */}
+                  <div className="mt-auto border-t border-[#e2e8f0] pt-8 flex items-end justify-between gap-8">
+                    <div className="flex items-center gap-8 flex-1">
+                      <div className="p-1.5 bg-white border border-[#e2e8f0] rounded-2xl shadow-sm overflow-hidden flex items-center justify-center">
+                         <img 
+                           src={`https://qr.limcorp.vn/qrcode.png?bank=970448&&number=0344970774&amount=${results.customerTotal}&content=${encodeURIComponent(params.note)}`}
+                           alt="Chuyển khoản QR"
+                           className="w-[110px] h-[110px] object-contain"
+                           referrerPolicy="no-referrer"
+                         />
+                      </div>
+                      <div className="space-y-4">
                          <div>
-                           <p className="text-xs font-bold text-[#64748b] uppercase tracking-wider">Nội dung</p>
-                           <p className="text-2xl font-black tracking-tighter uppercase">{params.note}</p>
-                        </div>
-                     </div>
+                            <p className="text-xs font-bold text-[#64748b] uppercase tracking-wider">Thông tin chuyển khoản</p>
+                            <p className="text-xs font-bold uppercase tracking-tight text-[#2563eb]">CTK: VO THANH NAM • NGÂN HÀNG OCB</p>
+                            <p className="text-xs font-bold text-[#64748b]">STK: 0344970774</p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-[#64748b] uppercase tracking-wider">Nội dung</p>
+                            <p className="text-xs font-bold tracking-tighter uppercase text-[#1e293b]">{params.note}</p>
+                         </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right flex flex-col items-end gap-3 min-w-[200px]">
+                       <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-4 w-full text-left">
+                          <p className="text-[10px] font-black text-[#2563eb] uppercase tracking-[0.2em] mb-1">TỔNG THANH TOÁN</p>
+                          <div className="text-3xl font-black tracking-tighter text-[#1e293b]">
+                            {results.customerTotal.toLocaleString()} <span className="text-sm font-bold text-[#64748b]">VND</span>
+                          </div>
+                       </div>
+                       <button 
+                         onClick={handleExportPDF}
+                         className="flex items-center gap-2 px-6 py-3 bg-[#22c55e] text-white text-base font-black rounded-2xl shadow-lg hover:bg-emerald-600 transition-all hover:scale-105 active:scale-95"
+                       >
+                         <Printer size={18} /> XUẤT BÁO GIÁ PDF
+                       </button>
+                    </div>
                   </div>
                 </div>
               </main>
