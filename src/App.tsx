@@ -921,9 +921,17 @@ export default function App() {
                           placeholder="Tìm theo hãng, màu hoặc loại nhựa..."
                           value={inventorySearch}
                           onChange={(e) => setInventorySearch(e.target.value)}
-                          className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl pl-10 pr-4 py-3 text-sm font-bold focus:ring-1 focus:ring-[#2563eb] outline-none"
+                          className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl pl-10 pr-10 py-3 text-sm font-bold focus:ring-1 focus:ring-[#2563eb] outline-none"
                         />
                         <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]" />
+                        {inventorySearch && (
+                          <button 
+                            onClick={() => setInventorySearch('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-[#1e293b] p-1 hover:bg-[#e2e8f0] rounded-full transition-colors"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
                      </div>
                      <div className="flex bg-[#f1f5f9] p-1 rounded-xl gap-1">
                         {[
