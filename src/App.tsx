@@ -239,6 +239,60 @@ export default function App() {
     }
   };
 
+  const handleMigrateOldData = async () => {
+    if (!user) return;
+    const confirm = window.confirm("Thao tác này sẽ tải dữ liệu từ kho chung cũ về máy bạn và gộp chung với kho hiện tại. Bạn có chắc chắn không?");
+    if (!confirm) return;
+
+    setIsSyncing(true);
+    try {
+      // Fake old config that user used previously
+      const oldConfig = {
+        projectId: "gen-lang-client-0815866071",
+        appId: "1:552098467114:web:974a2eca0d9e3f18e92253",
+        apiKey: "AIzaSyDBs5L5VyRSpYWRr8McKEaQwTzeGC1U7ow",
+        authDomain: "gen-lang-client-0815866071.firebaseapp.com"
+      };
+
+      // Import the initializeApp explicitly for this operation or use existing one but uniquely named
+      const { initializeApp: initApp } = await import('firebase/app');
+      const { getFirestore: getDb } = await import('firebase/firestore');
+
+      const oldApp = initApp(oldConfig, 'OldAppMigration');
+      const oldDb = getDb(oldApp, "ai-studio-712c3333-07aa-4d0e-bc4e-d535a8f4a43d");
+      
+      const q = query(collection(oldDb, 'materials'), where('ownerId', '==', user.uid));
+      const oldMaterialsSnap = await getDocs(q);
+      
+      let fetchedCount = 0;
+
+      // Extract and merge
+      const oldItems = oldMaterialsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Material));
+      if (oldItems.length > 0) {
+        fetchedCount = oldItems.length;
+        const localMaterialsStr = localStorage.getItem('local_materials');
+        const localMaterials: Material[] = localMaterialsStr ? JSON.parse(localMaterialsStr) : [];
+        
+        // Merge them, prioritizing newest/existing if IDs clash
+        const mergedMap = new Map<string, Material>();
+        oldItems.forEach(item => mergedMap.set(item.id, item));
+        localMaterials.forEach(item => mergedMap.set(item.id, item)); // latest overrides
+
+        const mergedList = Array.from(mergedMap.values());
+        setMaterials(mergedList);
+        localStorage.setItem('local_materials', JSON.stringify(mergedList));
+        enableOfflineMode(); // Triggers sync button to light up so they can push to new server
+      }
+
+      alert(`Đã khôi phục thành công ${fetchedCount} loại nhựa từ Server cũ xuống máy tính. Vui lòng ấn "Đồng bộ Cloud" để lưu vĩnh viễn lên Server mới!`);
+    } catch (e: any) {
+      console.error(e);
+      alert('Không thể khôi phục dữ liệu: ' + e.message);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleSyncToFirebase = async () => {
     if (!user) return;
     setIsSyncing(true);
@@ -1063,19 +1117,28 @@ export default function App() {
                     </p>
                   </div>
                   {user && (
-                    <button 
-                      onClick={() => handleMaterialAdd({
-                        name: 'Nhựa Mới',
-                        brand: 'No name',
-                        pricePerKg: 300000,
-                        color: 'Chưa đặt màu',
-                        colorHex: '#3b82f6',
-                        inStock: true
-                      })}
-                      className="bg-[#2563eb] text-white px-6 py-2.5 rounded-xl font-bold text-base shadow-md hover:scale-105 transition-all flex items-center gap-2"
-                    >
-                      <Plus size={18} /> Thêm Nhựa
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={handleMigrateOldData}
+                        className="bg-[#f1f5f9] text-[#1e293b] hover:bg-[#e2e8f0] px-4 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2"
+                        title="Khôi phục dữ liệu từ Firebase Cũ"
+                      >
+                        <Clock size={16} /> Khôi phục
+                      </button>
+                      <button 
+                        onClick={() => handleMaterialAdd({
+                          name: 'Nhựa Mới',
+                          brand: 'No name',
+                          pricePerKg: 300000,
+                          color: 'Chưa đặt màu',
+                          colorHex: '#3b82f6',
+                          inStock: true
+                        })}
+                        className="bg-[#2563eb] text-white px-6 py-2.5 rounded-xl font-bold text-base shadow-md hover:scale-105 transition-all flex items-center gap-2"
+                      >
+                        <Plus size={18} /> Thêm Nhựa
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -1154,7 +1217,8 @@ export default function App() {
                             brand: 'No name',
                             pricePerKg: 300000,
                             color: 'Chưa đặt màu',
-                            colorHex: '#3b82f6'
+                            colorHex: '#3b82f6',
+                            inStock: true
                           })}
                           className="bg-[#2563eb] text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-md hover:scale-105 transition-all flex items-center gap-2"
                         >
@@ -1165,6 +1229,12 @@ export default function App() {
                           className="bg-white text-[#2563eb] border border-[#2563eb]/20 px-6 py-2.5 rounded-xl font-bold text-sm shadow-md hover:bg-blue-50 transition-all flex items-center gap-2"
                         >
                           <Sparkles size={18} /> Tạo Dữ Liệu Mẫu
+                        </button>
+                        <button 
+                          onClick={handleMigrateOldData}
+                          className="bg-[#1e293b] text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-md hover:bg-slate-800 transition-all flex items-center gap-2"
+                        >
+                          <Clock size={18} /> Khôi phục từ Server cũ
                         </button>
                       </div>
                     </div>
