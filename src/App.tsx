@@ -284,9 +284,13 @@ export default function App() {
 
   const handleMaterialAdd = async (materialData: Partial<Material>) => {
     if (!user) return;
-    const id = Math.random().toString(36).substr(2, 9);
+    
+    // Use doc(collection()) to generate a robust auto-ID
+    const materialRef = doc(collection(db, 'materials'));
+    const id = materialRef.id;
+
     try {
-      await setDoc(doc(db, 'materials', id), {
+      await setDoc(materialRef, {
         category: 'PLA',
         inStock: true,
         ...materialData,
@@ -296,6 +300,8 @@ export default function App() {
         updatedAt: serverTimestamp()
       });
     } catch (e) {
+      console.error('Add material failed', e);
+      alert('Không thể thêm nhựa mới. Vui lòng kiểm tra kết nối hoặc quyền hạn.');
       handleFirestoreError(e, 'create', `materials/${id}`);
     }
   };
