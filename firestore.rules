@@ -38,7 +38,8 @@ service cloud.firestore {
           && (data.get('color', '') is string && data.get('color', '').size() <= 100)
           && (data.get('colorHex', '#ffffff') is string && data.get('colorHex', '#ffffff').size() <= 20)
           && (data.get('category', 'PLA') is string)
-          && (data.get('inStock', true) is bool);
+          && (data.get('inStock', true) is bool)
+          && (data.get('id', '') is string);
     }
 
     // Settings Validation Helper
@@ -57,19 +58,14 @@ service cloud.firestore {
       allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
       
       allow create: if isSignedIn() 
-                    && isValidId(materialId) 
-                    && isValidMaterial(incoming())
-                    && incoming().createdAt == request.time
-                    && incoming().updatedAt == request.time;
+                    && isValidMaterial(incoming());
       
       allow update: if isSignedIn() 
                     && isValidMaterial(incoming())
                     && incoming().ownerId == existing().ownerId
-                    && incoming().createdAt == existing().createdAt
-                    && incoming().updatedAt == request.time
                     && (
-                      // Allow updating all fields except immutable ones
-                      incoming().diff(existing()).affectedKeys().hasOnly(['name', 'brand', 'pricePerKg', 'color', 'colorHex', 'category', 'inStock', 'imageUrl', 'updatedAt'])
+                      // Allow updating all mutable fields
+                      incoming().diff(existing()).affectedKeys().hasOnly(['name', 'brand', 'pricePerKg', 'color', 'colorHex', 'category', 'inStock', 'imageUrl', 'updatedAt', 'id'])
                     );
       
       allow delete: if isOwner(existing().ownerId);

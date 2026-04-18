@@ -283,25 +283,34 @@ export default function App() {
   };
 
   const handleMaterialAdd = async (materialData: Partial<Material>) => {
-    if (!user) return;
+    if (!user) {
+      alert('Vui lòng đăng nhập để thực hiện tính năng này.');
+      return;
+    }
     
-    // Use doc(collection()) to generate a robust auto-ID
     const materialRef = doc(collection(db, 'materials'));
     const id = materialRef.id;
 
     try {
-      await setDoc(materialRef, {
-        category: 'PLA',
-        inStock: true,
-        ...materialData,
+      const newMaterial = {
+        name: materialData.name || 'Nhựa Mới',
+        brand: materialData.brand || 'Hãng Nhựa',
+        pricePerKg: materialData.pricePerKg || 300000,
+        color: materialData.color || 'Chưa đặt màu',
+        colorHex: materialData.colorHex || '#3b82f6',
+        category: materialData.category || 'PLA',
+        inStock: materialData.inStock ?? true,
         id,
         ownerId: user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
-      });
-    } catch (e) {
-      console.error('Add material failed', e);
-      alert('Không thể thêm nhựa mới. Vui lòng kiểm tra kết nối hoặc quyền hạn.');
+      };
+
+      await setDoc(materialRef, newMaterial);
+      console.log('Material added successfully:', id);
+    } catch (e: any) {
+      console.error('Detailed Add Material Error:', e);
+      alert(`Lỗi khi thêm nhựa: ${e.message || 'Không xác định'}`);
       handleFirestoreError(e, 'create', `materials/${id}`);
     }
   };
