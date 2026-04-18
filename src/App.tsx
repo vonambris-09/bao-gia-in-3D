@@ -772,36 +772,72 @@ export default function App() {
             </div>
 
             {/* Column 3: Quick Reference / Inventory List */}
-            <div className="flex flex-col gap-4 overflow-y-auto pl-1">
-              <div className="bg-white rounded-2xl p-5 border border-[#e2e8f0] shadow-sm flex flex-col h-full">
-                <div className="flex items-center gap-2 mb-4 text-[#64748b]">
-                  <Box size={14} />
-                  <h2 className="font-bold text-xs uppercase tracking-[0.1em]">Kho Nhựa Tham Khảo</h2>
+            <div className="flex flex-col gap-4 overflow-hidden pl-1 max-h-full">
+              <div className="bg-white rounded-2xl p-5 border border-[#e2e8f0] shadow-sm flex flex-col h-full overflow-hidden">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2 text-[#64748b]">
+                    <Box size={14} />
+                    <h2 className="font-bold text-xs uppercase tracking-[0.1em]">Kho Nhựa Tham Khảo</h2>
+                  </div>
+                  <div className="px-2 py-0.5 bg-[#f1f5f9] rounded-md text-[10px] font-bold text-[#64748b] uppercase tracking-tighter">
+                    Click để chọn nhanh
+                  </div>
                 </div>
                 
-                <div className="space-y-3 flex-1 overflow-y-auto no-scrollbar pb-4">
+                <div className="space-y-3 flex-1 overflow-y-auto no-scrollbar pb-4 pr-1">
                   {materials.map(m => (
-                    <div key={m.id} className="group p-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-xl hover:border-[#2563eb]/30 transition-all cursor-pointer">
+                    <div 
+                      key={m.id} 
+                      onClick={() => {
+                        if (m.inStock === false) return;
+                        setQuoteCategory(m.category || 'PLA');
+                        setParams(p => ({ ...p, materialId: m.id }));
+                      }}
+                      className={cn(
+                        "group p-3 border rounded-xl transition-all cursor-pointer relative overflow-hidden",
+                        m.inStock === false ? "opacity-40 grayscale pointer-events-none bg-[#f1f5f9] border-[#e2e8f0]" : 
+                        params.materialId === m.id 
+                          ? "bg-blue-50/50 border-[#2563eb] ring-2 ring-[#2563eb]/10 shadow-sm"
+                          : "bg-[#f8fafc] border-[#e2e8f0] hover:border-[#2563eb]/30 hover:shadow-md hover:-translate-y-0.5"
+                      )}
+                    >
+                      {params.materialId === m.id && (
+                        <div className="absolute top-0 right-0 w-8 h-8 flex items-center justify-center bg-[#2563eb] text-white rounded-bl-xl">
+                          <Check size={12} strokeWidth={3} />
+                        </div>
+                      )}
+                      
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white rounded-lg border border-[#e2e8f0] overflow-hidden flex items-center justify-center">
+                        <div className="w-10 h-10 bg-white rounded-lg border border-[#e2e8f0] overflow-hidden flex items-center justify-center shrink-0">
                           {m.imageUrl ? (
                             <img src={m.imageUrl} alt={m.name} className="w-full h-full object-cover" />
                           ) : (
                             <Box size={16} className="text-[#cbd5e1]" />
                           )}
                         </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-bold leading-none mb-1">{m.category} {m.brand}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold leading-none mb-1 truncate">{m.category} {m.brand}</p>
                           <div className="flex items-center gap-1.5 opacity-60">
                              <div className="w-2 h-2 rounded-full border border-black/5" style={{ backgroundColor: m.colorHex }} />
-                             <p className="text-xs font-bold truncate max-w-[80px]">{m.color || '---'}</p>
+                             <p className="text-[10px] font-bold truncate">{m.color || '---'}</p>
                           </div>
-                          <p className="text-xs font-bold text-[#2563eb] mt-1">{formatCurrency(m.pricePerKg)}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-xs font-bold text-[#2563eb]">{formatCurrency(m.pricePerKg)}</p>
+                            {m.inStock === false && (
+                              <span className="text-[8px] font-black uppercase text-red-500 bg-red-50 px-1 rounded">HẾT HÀNG</span>
+                            )}
+                          </div>
                         </div>
-                        <div className="w-3 h-3 rounded-full border border-black/5" style={{ backgroundColor: m.colorHex }} />
                       </div>
                     </div>
                   ))}
+                  
+                  {materials.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-10 text-[#cbd5e1] gap-2">
+                       <Box size={32} strokeWidth={1} />
+                       <p className="text-[10px] font-extrabold uppercase tracking-widest">Trống</p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-4 border-t border-[#e2e8f0] mt-auto">
