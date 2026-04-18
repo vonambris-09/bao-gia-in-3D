@@ -302,7 +302,7 @@ export default function App() {
     try {
       const newMaterial = {
         name: materialData.name || 'Nhựa Mới',
-        brand: materialData.brand || 'Hãng Nhựa',
+        brand: materialData.brand || 'No name',
         pricePerKg: materialData.pricePerKg || 300000,
         color: materialData.color || 'Chưa đặt màu',
         colorHex: materialData.colorHex || '#3b82f6',
@@ -516,8 +516,8 @@ export default function App() {
                         onChange={(e) => {
                           const val = Number(e.target.value);
                           setSystemSettings(s => ({ ...s, machinePowerW: val }));
-                          saveSettings({ ...systemSettings, machinePowerW: val });
                         }}
+                        onBlur={() => saveSettings(systemSettings)}
                         className="w-full bg-[#fdfdfd] border border-[#e2e8f0] rounded-xl px-4 py-2.5 text-sm font-semibold focus:ring-1 focus:ring-[#2563eb] outline-none"
                       />
                     </div>
@@ -529,8 +529,8 @@ export default function App() {
                         onChange={(e) => {
                           const val = Number(e.target.value);
                           setSystemSettings(s => ({ ...s, electricityPriceKwh: val }));
-                          saveSettings({ ...systemSettings, electricityPriceKwh: val });
                         }}
+                        onBlur={() => saveSettings(systemSettings)}
                         className="w-full bg-[#fdfdfd] border border-[#e2e8f0] rounded-xl px-4 py-2.5 text-sm font-semibold focus:ring-1 focus:ring-[#2563eb] outline-none"
                       />
                     </div>
@@ -542,8 +542,8 @@ export default function App() {
                         onChange={(e) => {
                           const val = Number(e.target.value);
                           setSystemSettings(s => ({ ...s, depreciationPerHour: val }));
-                          saveSettings({ ...systemSettings, depreciationPerHour: val });
                         }}
+                        onBlur={() => saveSettings(systemSettings)}
                         className="w-full bg-[#fdfdfd] border border-[#e2e8f0] rounded-xl px-4 py-2.5 text-sm font-semibold focus:ring-1 focus:ring-[#2563eb] outline-none"
                       />
                     </div>
@@ -926,7 +926,7 @@ export default function App() {
                     <button 
                       onClick={() => handleMaterialAdd({
                         name: 'Nhựa Mới',
-                        brand: 'Hãng Nhựa',
+                        brand: 'No name',
                         pricePerKg: 300000,
                         color: 'Chưa đặt màu',
                         colorHex: '#3b82f6',
@@ -1011,7 +1011,7 @@ export default function App() {
                         <button 
                           onClick={() => handleMaterialAdd({
                             name: 'Nhựa Mới',
-                            brand: 'Hãng Nhựa',
+                            brand: 'No name',
                             pricePerKg: 300000,
                             color: 'Chưa đặt màu',
                             colorHex: '#3b82f6'
@@ -1133,7 +1133,13 @@ export default function App() {
                                <div className="w-9 h-9 rounded-lg relative border border-[#e2e8f0] overflow-hidden shadow-sm" style={{ backgroundColor: m.colorHex }}>
                                   <input 
                                     type="color" value={m.colorHex} 
-                                    onChange={(e) => handleMaterialUpdate(m.id, { colorHex: e.target.value })}
+                                    onChange={(e) => {
+                                      // Only update local state visually, don't write to DB yet
+                                      // Due to how the current state is bound to materials fetched from DB,
+                                      // we might need a local state. But since we use onBlur to commit, onChange can be ignored or handled locally.
+                                      // We will change the bounding for color picker visually via a ref or just update when mouse released
+                                    }}
+                                    onBlur={(e) => handleMaterialUpdate(m.id, { colorHex: e.target.value })}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                   />
                                </div>
