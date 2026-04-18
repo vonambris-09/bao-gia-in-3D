@@ -145,7 +145,7 @@ export default function App() {
 
   // Settings Sync
   useEffect(() => {
-    if (!user) return;
+    if (!user?.uid) return;
     const settingsDoc = doc(db, 'settings', user.uid);
     return onSnapshot(settingsDoc, (snapshot) => {
       let finalData = snapshot.exists() ? (snapshot.data() as SystemSettings) : null;
@@ -162,11 +162,11 @@ export default function App() {
         localStorage.setItem('local_settings', JSON.stringify(finalData));
       }
     });
-  }, [user]);
+  }, [user?.uid]);
 
   // Materials Sync
   useEffect(() => {
-    if (!user) {
+    if (!user?.uid) {
       setMaterials([]);
       return;
     }
@@ -209,7 +209,8 @@ export default function App() {
       setParams(p => {
         const currentMaterial = finalItems.find(m => m.id === p.materialId);
         if (!p.materialId || !currentMaterial) {
-          const firstInCat = finalItems.find(m => (m.category || 'PLA') === quoteCategory);
+          const cat = quoteCategoryRef.current;
+          const firstInCat = finalItems.find(m => (m.category || 'PLA') === cat);
           if (firstInCat) return { ...p, materialId: firstInCat.id };
         }
         return p;
@@ -218,7 +219,7 @@ export default function App() {
       console.error("Firestore sync error:", error);
       alert(`Dữ liệu kho nhựa bị gián đoạn. Không thể tải: ${error.message}`);
     });
-  }, [user, quoteCategory]);
+  }, [user?.uid]);
 
   const enableOfflineMode = () => {
     setPendingSync(true);
@@ -319,6 +320,12 @@ export default function App() {
 
   const [inventorySearch, setInventorySearch] = useState('');
   const [inventoryStockFilter, setInventoryStockFilter] = useState<'all' | 'in' | 'out'>('all');
+
+  // Keep a ref of quoteCategory to avoid Firebase listener resubscription loops
+  const quoteCategoryRef = useRef(quoteCategory);
+  useEffect(() => {
+    quoteCategoryRef.current = quoteCategory;
+  }, [quoteCategory]);
 
   // Save params and category to localStorage on change
   useEffect(() => {
