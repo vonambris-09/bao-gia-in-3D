@@ -258,7 +258,7 @@ export default function App() {
       
       // Upsert local changes
       const writePromises = materials.map(m => {
-        return setDoc(doc(db, 'materials', m.id), { ...m, updatedAt: serverTimestamp() }, { merge: true });
+        return setDoc(doc(db, 'materials', m.id), { ...m, ownerId: user.uid, updatedAt: serverTimestamp() }, { merge: true });
       });
 
       // Sync settings
