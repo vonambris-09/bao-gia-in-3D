@@ -1068,7 +1068,7 @@ export default function App() {
                             <Trash2 size={14} />
                           </button>
                         </div>
-                        <div className="p-4 space-y-3">
+                        <div className="p-4 space-y-1.5">
                            {/* Row 1: Category & Brand */}
                            <div className="flex gap-2">
                              <div className="shrink-0">
@@ -1118,7 +1118,7 @@ export default function App() {
                            </div>
 
                            {/* Row 3: Price & Stock */}
-                           <div className="flex gap-2 items-end pt-1">
+                           <div className="flex gap-2 items-end">
                              <div className="flex-1">
                                <label className="text-[10px] font-extrabold uppercase text-[#64748b] block mb-1">Giá / KG (VNĐ)</label>
                                <input 
