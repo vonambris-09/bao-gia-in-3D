@@ -35,7 +35,8 @@ import {
   Sparkles,
   Edit2,
   Copy,
-  Check
+  Check,
+  Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import QRCode from 'react-qr-code';
@@ -188,6 +189,9 @@ export default function App() {
     };
   });
 
+  const [inventorySearch, setInventorySearch] = useState('');
+  const [inventoryStockFilter, setInventoryStockFilter] = useState<'all' | 'in' | 'out'>('all');
+
   // Save params and category to localStorage on change
   useEffect(() => {
     localStorage.setItem('lastQuoteParams', JSON.stringify(params));
@@ -335,6 +339,19 @@ export default function App() {
       handleFirestoreError(e, 'create', 'materials/batch');
     }
   };
+
+  const filteredMaterials = materials.filter(m => {
+    const searchMatch = !inventorySearch || 
+      m.brand.toLowerCase().includes(inventorySearch.toLowerCase()) ||
+      m.color?.toLowerCase().includes(inventorySearch.toLowerCase()) ||
+      m.category?.toLowerCase().includes(inventorySearch.toLowerCase());
+    
+    const stockMatch = inventoryStockFilter === 'all' || 
+      (inventoryStockFilter === 'in' && m.inStock !== false) ||
+      (inventoryStockFilter === 'out' && m.inStock === false);
+      
+    return searchMatch && stockMatch;
+  });
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-[#1e293b] font-sans selection:bg-[#2563eb]/20 flex flex-col">
@@ -783,9 +800,28 @@ export default function App() {
                     Click để chọn nhanh
                   </div>
                 </div>
+
+                <div className="mb-4 relative">
+                  <input 
+                    type="text"
+                    placeholder="Tìm nhựa..."
+                    value={inventorySearch}
+                    onChange={(e) => setInventorySearch(e.target.value)}
+                    className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl pl-8 pr-3 py-1.5 text-[10px] font-bold focus:ring-1 focus:ring-[#2563eb] outline-none"
+                  />
+                  <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#64748b]" />
+                  {inventorySearch && (
+                    <button 
+                      onClick={() => setInventorySearch('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-[#1e293b]"
+                    >
+                      <X size={10} />
+                    </button>
+                  )}
+                </div>
                 
                 <div className="space-y-3 flex-1 overflow-y-auto no-scrollbar pb-4 pr-1">
-                  {materials.map(m => (
+                  {filteredMaterials.map(m => (
                     <div 
                       key={m.id} 
                       onClick={() => {
@@ -842,8 +878,8 @@ export default function App() {
 
                 <div className="pt-4 border-t border-[#e2e8f0] mt-auto">
                    <div className="bg-[#2563eb] rounded-xl p-3 text-white">
-                      <p className="text-[10px] font-bold uppercase opacity-80 mb-1">Tổng tồn kho</p>
-                      <p className="text-xl font-black tracking-tight">{materials.length} Loại</p>
+                      <p className="text-[10px] font-bold uppercase opacity-80 mb-1">Thống kê</p>
+                      <p className="text-xl font-black tracking-tight">Tổng {filteredMaterials.length} Loại</p>
                    </div>
                 </div>
               </div>
@@ -867,7 +903,8 @@ export default function App() {
                         brand: 'Hãng Nhựa',
                         pricePerKg: 300000,
                         color: 'Chưa đặt màu',
-                        colorHex: '#3b82f6'
+                        colorHex: '#3b82f6',
+                        inStock: true
                       })}
                       className="bg-[#2563eb] text-white px-6 py-2.5 rounded-xl font-bold text-base shadow-md hover:scale-105 transition-all flex items-center gap-2"
                     >
@@ -875,6 +912,41 @@ export default function App() {
                     </button>
                   )}
                 </div>
+
+                {user && (
+                  <div className="flex flex-col md:flex-row gap-4 mb-8">
+                     <div className="flex-1 relative">
+                        <input 
+                          type="text"
+                          placeholder="Tìm theo hãng, màu hoặc loại nhựa..."
+                          value={inventorySearch}
+                          onChange={(e) => setInventorySearch(e.target.value)}
+                          className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl pl-10 pr-4 py-3 text-sm font-bold focus:ring-1 focus:ring-[#2563eb] outline-none"
+                        />
+                        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]" />
+                     </div>
+                     <div className="flex bg-[#f1f5f9] p-1 rounded-xl gap-1">
+                        {[
+                          { id: 'all', label: 'Tất cả' },
+                          { id: 'in', label: 'Còn hàng' },
+                          { id: 'out', label: 'Hết hàng' }
+                        ].map((btn) => (
+                           <button
+                             key={btn.id}
+                             onClick={() => setInventoryStockFilter(btn.id as any)}
+                             className={cn(
+                               "px-4 py-2 rounded-lg text-xs font-black uppercase tracking-tight transition-all",
+                               inventoryStockFilter === btn.id 
+                                ? "bg-white text-[#2563eb] shadow-sm" 
+                                : "text-[#64748b] hover:text-[#1e293b]"
+                             )}
+                           >
+                             {btn.label}
+                           </button>
+                        ))}
+                     </div>
+                  </div>
+                )}
 
                 {authLoading ? (
                   <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -923,10 +995,21 @@ export default function App() {
                       </div>
                     </div>
                   </div>
+                ) : filteredMaterials.length === 0 && materials.length > 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 bg-[#f8fafc] border-2 border-dashed border-[#e2e8f0] rounded-[32px] gap-4">
+                    <Search size={48} className="text-[#cbd5e1]" />
+                    <div className="text-center">
+                      <h3 className="font-bold text-lg mb-1">Không tìm thấy kết quả</h3>
+                      <p className="text-sm text-[#64748b]">Thử thay đổi từ khóa hoặc bộ lọc của bạn.</p>
+                    </div>
+                  </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {materials.map(m => (
-                      <div key={m.id} className="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl overflow-hidden group">
+                    {filteredMaterials.map(m => (
+                      <div key={m.id} className={cn(
+                        "bg-[#f8fafc] border rounded-2xl overflow-hidden group transition-all",
+                        (m.inStock === false) ? "opacity-75 border-red-100" : "border-[#e2e8f0]"
+                      )}>
                         <div className="h-32 bg-[#cbd5e1] relative overflow-hidden flex items-center justify-center">
                           {m.imageUrl ? (
                             <img src={m.imageUrl} alt={m.name} className="w-full h-full object-cover" />
@@ -1021,14 +1104,14 @@ export default function App() {
                                 <button
                                   onClick={() => handleMaterialUpdate(m.id, { inStock: !(m.inStock ?? true) })}
                                   className={cn(
-                                    "w-8 h-8 rounded-lg flex items-center justify-center transition-colors border",
+                                    "w-8 h-8 rounded-lg flex items-center justify-center transition-all border shadow-sm active:scale-90",
                                     (m.inStock ?? true) 
-                                      ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
-                                      : "bg-red-50 text-red-600 border-red-100"
+                                      ? "bg-emerald-500 text-white border-emerald-400" 
+                                      : "bg-red-500 text-white border-red-400"
                                   )}
-                                  title={(m.inStock ?? true) ? "Còn hàng" : "Hết hàng"}
+                                  title={(m.inStock ?? true) ? "Còn hàng - Click để cập nhật hết hàng" : "Hết hàng - Click để cập nhật còn hàng"}
                                 >
-                                  {(m.inStock ?? true) ? <Plus size={14} /> : <X size={14} />}
+                                  {(m.inStock ?? true) ? <Check size={14} strokeWidth={3} /> : <X size={14} strokeWidth={3} />}
                                 </button>
                               </div>
                               <div className="w-10 h-10 rounded-xl relative border border-[#e2e8f0] overflow-hidden" style={{ backgroundColor: m.colorHex }}>
