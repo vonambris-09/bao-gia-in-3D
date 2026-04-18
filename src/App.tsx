@@ -133,11 +133,18 @@ export default function App() {
     if (!user) return;
     const settingsDoc = doc(db, 'settings', user.uid);
     return onSnapshot(settingsDoc, (snapshot) => {
-      if (localStorage.getItem('pending_sync') === 'true') return;
-      if (snapshot.exists()) {
-        const data = snapshot.data() as SystemSettings;
-        setSystemSettings(data);
-        localStorage.setItem('local_settings', JSON.stringify(data));
+      let finalData = snapshot.exists() ? (snapshot.data() as SystemSettings) : null;
+      
+      if (localStorage.getItem('pending_sync') === 'true') {
+        const localSettingsStr = localStorage.getItem('local_settings');
+        if (localSettingsStr) {
+           finalData = JSON.parse(localSettingsStr);
+        }
+      }
+      
+      if (finalData) {
+        setSystemSettings(finalData);
+        localStorage.setItem('local_settings', JSON.stringify(finalData));
       }
     });
   }, [user]);
@@ -153,22 +160,41 @@ export default function App() {
       where('ownerId', '==', user.uid)
     );
     return onSnapshot(q, (snapshot) => {
-      if (localStorage.getItem('pending_sync') === 'true') return;
-      const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Material))
-        .sort((a, b) => {
-          // If createdAt is pending (no seconds), assume it's "now" so new items stay at the top
-          const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : Date.now();
-          const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : Date.now();
-          return timeB - timeA;
-        });
-      setMaterials(items);
-      localStorage.setItem('local_materials', JSON.stringify(items));
+      const serverItems = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Material));
+      let finalItems = serverItems;
+
+      if (localStorage.getItem('pending_sync') === 'true') {
+        const localStr = localStorage.getItem('local_materials');
+        const deletedIds = JSON.parse(localStorage.getItem('local_deleted') || '[]');
+        if (localStr) {
+          const localItems: Material[] = JSON.parse(localStr);
+          const mergedMap = new Map<string, Material>();
+          
+          serverItems.forEach(item => {
+            if (!deletedIds.includes(item.id)) mergedMap.set(item.id, item);
+          });
+          localItems.forEach(item => {
+            if (!deletedIds.includes(item.id)) mergedMap.set(item.id, item);
+          });
+          finalItems = Array.from(mergedMap.values());
+        }
+      }
+
+      finalItems.sort((a, b) => {
+        // If createdAt is pending (no seconds), assume it's "now" so new items stay at the top
+        const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : Date.now();
+        const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : Date.now();
+        return timeB - timeA;
+      });
+
+      setMaterials(finalItems);
+      localStorage.setItem('local_materials', JSON.stringify(finalItems));
       
       // Auto-select if nothing is selected or if current selection is invalid
       setParams(p => {
-        const currentMaterial = items.find(m => m.id === p.materialId);
+        const currentMaterial = finalItems.find(m => m.id === p.materialId);
         if (!p.materialId || !currentMaterial) {
-          const firstInCat = items.find(m => (m.category || 'PLA') === quoteCategory);
+          const firstInCat = finalItems.find(m => (m.category || 'PLA') === quoteCategory);
           if (firstInCat) return { ...p, materialId: firstInCat.id };
         }
         return p;
@@ -226,6 +252,7 @@ export default function App() {
       
       setPendingSync(false);
       localStorage.setItem('pending_sync', 'false');
+      localStorage.setItem('local_deleted', '[]');
       alert('Đồng bộ lên Cloud thành công! Dữ liệu đã an toàn.');
     } catch (e: any) {
       console.error("Sync Error:", e);
@@ -423,6 +450,10 @@ export default function App() {
     const updatedMaterials = materials.filter(m => m.id !== id);
     setMaterials(updatedMaterials);
     localStorage.setItem('local_materials', JSON.stringify(updatedMaterials));
+    
+    // Remember deletion offline so server sync doesn't resurrect it
+    const deletedIds = JSON.parse(localStorage.getItem('local_deleted') || '[]');
+    localStorage.setItem('local_deleted', JSON.stringify([...deletedIds, id]));
 
     try {
       await safeCloudWrite(deleteDoc(doc(db, 'materials', id)));
