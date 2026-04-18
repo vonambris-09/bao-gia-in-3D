@@ -337,8 +337,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-[#1e293b] font-sans selection:bg-[#2563eb]/20 flex flex-col">
-      <div className="flex-1 flex flex-col max-w-[1600px] mx-auto w-full border-x border-[#e2e8f0]/40 shadow-2xl bg-white shadow-slate-200">
+    <div className="h-screen bg-[#f8fafc] text-[#1e293b] font-sans selection:bg-[#2563eb]/20 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col max-w-[1600px] mx-auto w-full border-x border-[#e2e8f0]/40 shadow-2xl bg-white shadow-slate-200 overflow-hidden">
         {/* Bento Header */}
       <header className="h-[60px] px-8 border-b border-[#e2e8f0] bg-white flex justify-between items-center shrink-0">
         <div className="flex items-center gap-2">
@@ -784,7 +784,7 @@ export default function App() {
                   </div>
                 </div>
                 
-                <div className="space-y-3 max-h-[680px] overflow-y-auto no-scrollbar pb-4 pr-1">
+                <div className="space-y-3 flex-1 overflow-y-auto no-scrollbar pb-4 pr-1">
                   {materials.map(m => (
                     <div 
                       key={m.id} 
