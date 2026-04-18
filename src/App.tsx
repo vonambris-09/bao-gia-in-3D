@@ -779,7 +779,7 @@ export default function App() {
                     </div>
 
                     <div className="text-right flex flex-col items-end gap-3 min-w-[280px]">
-                       <div className="bg-[#2563eb] border border-[#2563eb]/20 rounded-3xl p-7 w-full text-left shadow-xl shadow-blue-100">
+                       <div className="bg-[#22c55e] border border-[#22c55e]/20 rounded-3xl p-7 w-full text-left shadow-xl shadow-emerald-100">
                           <p className="text-[11px] font-black text-white/80 uppercase tracking-[0.3em] mb-2">TỔNG THANH TOÁN</p>
                           <div className="text-5xl font-black tracking-tighter text-white">
                             {results.customerTotal.toLocaleString()} <span className="text-lg font-bold opacity-60">VND</span>
@@ -798,9 +798,6 @@ export default function App() {
                   <div className="flex items-center gap-2 text-[#64748b]">
                     <Box size={14} />
                     <h2 className="font-bold text-xs uppercase tracking-[0.1em]">Kho Nhựa Tham Khảo</h2>
-                  </div>
-                  <div className="px-2 py-0.5 bg-[#f1f5f9] rounded-md text-[10px] font-bold text-[#64748b] uppercase tracking-tighter">
-                    Click để chọn nhanh
                   </div>
                 </div>
 
