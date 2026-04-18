@@ -52,7 +52,8 @@ import {
   setDoc, 
   deleteDoc, 
   serverTimestamp,
-  orderBy
+  orderBy,
+  getDocs
 } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
@@ -99,15 +100,25 @@ export default function App() {
   const quoteRef = useRef<HTMLElement>(null);
   
   // State for Settings
-  const [systemSettings, setSystemSettings] = useState<SystemSettings>({
-    machinePowerW: 200,
-    electricityPriceKwh: 5000,
-    depreciationPerHour: 4000,
-    serviceNotes: DEFAULT_SERVICE_NOTES
+  const [systemSettings, setSystemSettings] = useState<SystemSettings>(() => {
+    const local = localStorage.getItem('local_settings');
+    return local ? JSON.parse(local) : {
+      machinePowerW: 200,
+      electricityPriceKwh: 5000,
+      depreciationPerHour: 4000,
+      serviceNotes: DEFAULT_SERVICE_NOTES
+    };
   });
 
   // State for Inventory
-  const [materials, setMaterials] = useState<Material[]>([]);
+  const [materials, setMaterials] = useState<Material[]>(() => {
+    const local = localStorage.getItem('local_materials');
+    return local ? JSON.parse(local) : [];
+  });
+
+  // Offline Sync State
+  const [pendingSync, setPendingSync] = useState(() => localStorage.getItem('pending_sync') === 'true');
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Auth Listener
   useEffect(() => {
@@ -122,8 +133,11 @@ export default function App() {
     if (!user) return;
     const settingsDoc = doc(db, 'settings', user.uid);
     return onSnapshot(settingsDoc, (snapshot) => {
+      if (localStorage.getItem('pending_sync') === 'true') return;
       if (snapshot.exists()) {
-        setSystemSettings(snapshot.data() as SystemSettings);
+        const data = snapshot.data() as SystemSettings;
+        setSystemSettings(data);
+        localStorage.setItem('local_settings', JSON.stringify(data));
       }
     });
   }, [user]);
@@ -139,6 +153,7 @@ export default function App() {
       where('ownerId', '==', user.uid)
     );
     return onSnapshot(q, (snapshot) => {
+      if (localStorage.getItem('pending_sync') === 'true') return;
       const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Material))
         .sort((a, b) => {
           // If createdAt is pending (no seconds), assume it's "now" so new items stay at the top
@@ -147,6 +162,7 @@ export default function App() {
           return timeB - timeA;
         });
       setMaterials(items);
+      localStorage.setItem('local_materials', JSON.stringify(items));
       
       // Auto-select if nothing is selected or if current selection is invalid
       setParams(p => {
@@ -163,15 +179,60 @@ export default function App() {
     });
   }, [user, quoteCategory]);
 
+  const enableOfflineMode = () => {
+    setPendingSync(true);
+    localStorage.setItem('pending_sync', 'true');
+  };
+
+  const handleSyncToFirebase = async () => {
+    if (!user) return;
+    setIsSyncing(true);
+    try {
+      // Get remote to find deletions
+      const q = query(collection(db, 'materials'), where('ownerId', '==', user.uid));
+      const snap = await getDocs(q);
+      const remoteIds = snap.docs.map(d => d.id);
+      const localIds = materials.map(m => m.id);
+      
+      const toDelete = remoteIds.filter(id => !localIds.includes(id));
+      const deletePromises = toDelete.map(id => deleteDoc(doc(db, 'materials', id)));
+      
+      // Upsert local changes
+      const writePromises = materials.map(m => {
+        return setDoc(doc(db, 'materials', m.id), { ...m, updatedAt: serverTimestamp() }, { merge: true });
+      });
+
+      // Sync settings
+      const settingsPromise = setDoc(doc(db, 'settings', user.uid), {
+        ...systemSettings,
+        ownerId: user.uid
+      });
+
+      await Promise.all([...deletePromises, ...writePromises, settingsPromise]);
+      
+      setPendingSync(false);
+      localStorage.setItem('pending_sync', 'false');
+      alert('Đồng bộ lên Cloud thành công! Dữ liệu đã an toàn.');
+    } catch (e: any) {
+      console.error("Sync Error:", e);
+      alert(`Đồng bộ thất bại. Có thể do giới hạn quota. Vui lòng thử lại vào ngày mai.\nChi tiết: ${e.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const saveSettings = async (newSettings: SystemSettings) => {
     if (!user) return;
+    setSystemSettings(newSettings);
+    localStorage.setItem('local_settings', JSON.stringify(newSettings));
     try {
       await setDoc(doc(db, 'settings', user.uid), {
         ...newSettings,
         ownerId: user.uid
       });
     } catch (e) {
-      handleFirestoreError(e, 'update', `settings/${user.uid}`);
+      enableOfflineMode();
+      console.warn("Saved settings locally. Enabling offline mode.");
     }
   };
 
@@ -299,51 +360,61 @@ export default function App() {
     const materialRef = doc(collection(db, 'materials'));
     const id = materialRef.id;
 
-    try {
-      const newMaterial = {
-        name: materialData.name || 'Nhựa Mới',
-        brand: materialData.brand || 'No name',
-        pricePerKg: materialData.pricePerKg || 300000,
-        color: materialData.color || 'Chưa đặt màu',
-        colorHex: materialData.colorHex || '#3b82f6',
-        category: materialData.category || 'PLA',
-        inStock: materialData.inStock ?? true,
-        id,
-        ownerId: user.uid,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      };
+    const newMaterial = {
+      name: materialData.name || 'Nhựa Mới',
+      brand: materialData.brand || 'No name',
+      pricePerKg: materialData.pricePerKg || 300000,
+      color: materialData.color || 'Chưa đặt màu',
+      colorHex: materialData.colorHex || '#3b82f6',
+      category: materialData.category || 'PLA',
+      inStock: materialData.inStock ?? true,
+      id,
+      ownerId: user.uid,
+      createdAt: { seconds: Date.now() / 1000 } as any,
+      updatedAt: { seconds: Date.now() / 1000 } as any
+    };
 
-      await setDoc(materialRef, newMaterial);
-      console.log('Material added successfully:', id);
+    const newMaterials = [newMaterial, ...materials];
+    setMaterials(newMaterials);
+    localStorage.setItem('local_materials', JSON.stringify(newMaterials));
+
+    try {
+      await setDoc(materialRef, { ...newMaterial, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
     } catch (e: any) {
-      console.error('Detailed Add Material Error:', e);
-      alert(`Lỗi khi thêm nhựa: ${e.message || 'Không xác định'}`);
-      handleFirestoreError(e, 'create', `materials/${id}`);
+      enableOfflineMode();
     }
   };
 
   const handleMaterialUpdate = async (id: string, updates: Partial<Material>) => {
     if (!user) return;
+    
+    // Update local immediately
+    const updatedMaterials = materials.map(m => m.id === id ? { ...m, ...updates, updatedAt: { seconds: Date.now()/1000 } as any } : m);
+    setMaterials(updatedMaterials);
+    localStorage.setItem('local_materials', JSON.stringify(updatedMaterials));
+
     try {
       await setDoc(doc(db, 'materials', id), {
         ...updates,
         updatedAt: serverTimestamp()
       }, { merge: true });
-      console.log('Material updated successfully:', id);
     } catch (e: any) {
-      console.error('Update material failed', e);
-      alert(`Lỗi khi cập nhật nhựa: ${e.message || 'Không xác định'}`);
-      handleFirestoreError(e, 'update', `materials/${id}`);
+      enableOfflineMode();
     }
   };
 
   const handleMaterialDelete = async (id: string) => {
     if (!user) return;
+
+    // Update local immediately
+    const updatedMaterials = materials.filter(m => m.id !== id);
+    setMaterials(updatedMaterials);
+    localStorage.setItem('local_materials', JSON.stringify(updatedMaterials));
+
     try {
       await deleteDoc(doc(db, 'materials', id));
     } catch (e) {
-      handleFirestoreError(e, 'delete', `materials/${id}`);
+      enableOfflineMode();
     }
   };
 
@@ -392,6 +463,16 @@ export default function App() {
         </div>
         
         <nav className="flex items-center gap-3">
+          {pendingSync && (
+            <button 
+              onClick={handleSyncToFirebase}
+              disabled={isSyncing}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-extrabold transition-all shadow-md active:scale-95 bg-amber-500 text-white shadow-amber-200 hover:bg-amber-600 disabled:opacity-50 animate-pulse"
+            >
+              {isSyncing ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              {isSyncing ? 'Đang đồng bộ...' : 'Đồng bộ Cloud'}
+            </button>
+          )}
           <button 
             onClick={() => setActiveTab('quote')}
             className={cn(
