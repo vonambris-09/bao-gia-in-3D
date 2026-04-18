@@ -622,7 +622,7 @@ export default function App() {
 
                         <div className="p-8 space-y-8 flex-1">
                   {/* Top Info Grid */}
-                  <div className="grid grid-cols-[1fr_180px] gap-4">
+                  <div className="grid grid-cols-[1fr_240px] gap-4">
                     <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-5">
                       <div className="flex items-center gap-2 mb-4 text-[#2563eb]">
                         <Info size={14} />
@@ -655,7 +655,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="bg-white border border-[#e2e8f0] rounded-2xl overflow-hidden flex items-center justify-center shadow-sm h-full max-h-[220px]">
+                    <div className="bg-white border border-[#e2e8f0] rounded-2xl overflow-hidden flex items-center justify-center shadow-sm h-full max-h-[240px]">
                       {selectedMaterial?.imageUrl ? (
                         <img 
                           src={selectedMaterial.imageUrl} 
