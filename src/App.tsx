@@ -57,6 +57,21 @@ import {
 } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
+const ColorPicker = ({ defaultColor, onBlur }: { defaultColor: string, onBlur: (hex: string) => void }) => {
+  const [color, setColor] = useState(defaultColor);
+  return (
+    <div className="w-9 h-9 rounded-lg relative border border-[#e2e8f0] overflow-hidden shadow-sm" style={{ backgroundColor: color }}>
+      <input 
+        type="color" 
+        value={color} 
+        onChange={(e) => setColor(e.target.value)}
+        onBlur={() => onBlur(color)}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+      />
+    </div>
+  );
+};
+
 // Default Materials (Dummy for type safety if needed, but we fetch from DB)
 const INITIAL_MATERIALS: Material[] = [
   { id: '1', name: 'PLA Standard', brand: 'eSUN', pricePerKg: 315000, color: 'Trắng', colorHex: '#ffffff', ownerId: 'system', category: 'PLA', inStock: true },
@@ -1255,19 +1270,7 @@ export default function App() {
                              </div>
                              <div className="shrink-0">
                                <label className="text-[10px] font-bold text-[#64748b] uppercase block mb-1">Mã</label>
-                               <div className="w-9 h-9 rounded-lg relative border border-[#e2e8f0] overflow-hidden shadow-sm" style={{ backgroundColor: m.colorHex }}>
-                                  <input 
-                                    type="color" value={m.colorHex} 
-                                    onChange={(e) => {
-                                      // Only update local state visually, don't write to DB yet
-                                      // Due to how the current state is bound to materials fetched from DB,
-                                      // we might need a local state. But since we use onBlur to commit, onChange can be ignored or handled locally.
-                                      // We will change the bounding for color picker visually via a ref or just update when mouse released
-                                    }}
-                                    onBlur={(e) => handleMaterialUpdate(m.id, { colorHex: e.target.value })}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                  />
-                               </div>
+                               <ColorPicker defaultColor={m.colorHex || '#000000'} onBlur={(hex) => handleMaterialUpdate(m.id, { colorHex: hex })} />
                              </div>
                            </div>
 
