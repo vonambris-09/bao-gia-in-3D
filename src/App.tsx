@@ -184,6 +184,20 @@ export default function App() {
     localStorage.setItem('pending_sync', 'true');
   };
 
+  const safeCloudWrite = async (writePromise: Promise<any>) => {
+    try {
+      await Promise.race([
+        writePromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
+      ]);
+    } catch (e: any) {
+      if (e.message === 'timeout' || e.code === 'resource-exhausted') {
+        enableOfflineMode();
+      }
+      throw e;
+    }
+  };
+
   const handleSyncToFirebase = async () => {
     if (!user) return;
     setIsSyncing(true);
@@ -226,12 +240,11 @@ export default function App() {
     setSystemSettings(newSettings);
     localStorage.setItem('local_settings', JSON.stringify(newSettings));
     try {
-      await setDoc(doc(db, 'settings', user.uid), {
+      await safeCloudWrite(setDoc(doc(db, 'settings', user.uid), {
         ...newSettings,
         ownerId: user.uid
-      });
+      }));
     } catch (e) {
-      enableOfflineMode();
       console.warn("Saved settings locally. Enabling offline mode.");
     }
   };
@@ -379,9 +392,9 @@ export default function App() {
     localStorage.setItem('local_materials', JSON.stringify(newMaterials));
 
     try {
-      await setDoc(materialRef, { ...newMaterial, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      await safeCloudWrite(setDoc(materialRef, { ...newMaterial, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
     } catch (e: any) {
-      enableOfflineMode();
+      // Offline mode enabled
     }
   };
 
@@ -394,12 +407,12 @@ export default function App() {
     localStorage.setItem('local_materials', JSON.stringify(updatedMaterials));
 
     try {
-      await setDoc(doc(db, 'materials', id), {
+      await safeCloudWrite(setDoc(doc(db, 'materials', id), {
         ...updates,
         updatedAt: serverTimestamp()
-      }, { merge: true });
+      }, { merge: true }));
     } catch (e: any) {
-      enableOfflineMode();
+      // Offline mode enabled
     }
   };
 
@@ -412,9 +425,9 @@ export default function App() {
     localStorage.setItem('local_materials', JSON.stringify(updatedMaterials));
 
     try {
-      await deleteDoc(doc(db, 'materials', id));
+      await safeCloudWrite(deleteDoc(doc(db, 'materials', id)));
     } catch (e) {
-      enableOfflineMode();
+      // Offline mode enabled
     }
   };
 
