@@ -57,6 +57,15 @@ import {
 } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
+const generateShortId = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
 const ColorPicker = ({ defaultColor, onBlur }: { defaultColor: string, onBlur: (hex: string) => void }) => {
   const [color, setColor] = useState(defaultColor);
   return (
@@ -174,7 +183,9 @@ export default function App() {
       collection(db, 'materials'), 
       where('ownerId', '==', user.uid)
     );
+    console.log("🔥 [Firebase] Đang thiết lập kết nối tải dữ liệu kho nhựa...");
     return onSnapshot(q, (snapshot) => {
+      console.log(`📡 [Firebase] Nhận dữ liệu: ${snapshot.size} vật liệu.`);
       const serverItems = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Material));
       let finalItems = serverItems;
 
@@ -426,7 +437,7 @@ export default function App() {
     const materialRef = doc(collection(db, 'materials'));
     const id = materialRef.id;
 
-    const newMaterial = {
+    const newMaterial: Material = {
       name: materialData.name || 'Nhựa Mới',
       brand: materialData.brand || 'No name',
       pricePerKg: materialData.pricePerKg || 300000,
@@ -434,6 +445,7 @@ export default function App() {
       colorHex: materialData.colorHex || '#3b82f6',
       category: materialData.category || 'PLA',
       inStock: materialData.inStock ?? true,
+      code: materialData.code || generateShortId(),
       id,
       ownerId: user.uid,
       createdAt: { seconds: Date.now() / 1000 } as any,
@@ -1269,9 +1281,9 @@ export default function App() {
                              </div>
                            </div>
 
-                           {/* Row 2: Color Name & Hex Picker */}
+                           {/* Row 2: Color Name, SKU Code & Hex Picker */}
                            <div className="flex gap-2">
-                             <div className="flex-1">
+                             <div className="flex-[2]">
                                <label className="text-[10px] font-bold text-[#64748b] uppercase block mb-1">Màu sắc</label>
                                <input 
                                  defaultValue={m.color} 
@@ -1280,8 +1292,17 @@ export default function App() {
                                  className="w-full h-9 text-xs font-bold text-[#2563eb] bg-white border border-[#e2e8f0] px-3 rounded-lg outline-none focus:ring-1 focus:ring-[#2563eb]"
                                />
                              </div>
+                             <div className="flex-1">
+                               <label className="text-[10px] font-bold text-[#64748b] uppercase block mb-1">Mã Nhựa</label>
+                               <input 
+                                 defaultValue={m.code || ''} 
+                                 onBlur={(e) => handleMaterialUpdate(m.id, { code: e.target.value.toUpperCase() })}
+                                 placeholder="ABC123"
+                                 className="w-full h-9 text-xs font-black text-[#1e293b] bg-[#f8fafc] border border-[#e2e8f0] px-2 rounded-lg outline-none focus:ring-1 focus:ring-[#2563eb] uppercase text-center"
+                               />
+                             </div>
                              <div className="shrink-0">
-                               <label className="text-[10px] font-bold text-[#64748b] uppercase block mb-1">Mã</label>
+                               <label className="text-[10px] font-bold text-[#64748b] uppercase block mb-1">Hex</label>
                                <ColorPicker defaultColor={m.colorHex || '#000000'} onBlur={(hex) => handleMaterialUpdate(m.id, { colorHex: hex })} />
                              </div>
                            </div>
