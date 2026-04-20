@@ -325,7 +325,7 @@ export default function App() {
       infillPercent: 20,
       layerHeightMm: 0.2,
       extraFee: 10000,
-      note: '67UYHXF',
+      note: generateShortId(),
     };
   });
 
@@ -445,7 +445,6 @@ export default function App() {
       colorHex: materialData.colorHex || '#3b82f6',
       category: materialData.category || 'PLA',
       inStock: materialData.inStock ?? true,
-      code: materialData.code || generateShortId(),
       id,
       ownerId: user.uid,
       createdAt: { seconds: Date.now() / 1000 } as any,
@@ -783,12 +782,20 @@ export default function App() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-[#1e293b] px-1">Nội Dung</label>
+                    <label className="text-xs font-bold text-[#1e293b] px-1 flex justify-between items-center">
+                      Nội Dung Chuyển Khoản
+                      <button 
+                        onClick={() => setParams({ ...params, note: generateShortId() })}
+                        className="text-[10px] text-[#2563eb] hover:underline"
+                      >
+                        Tạo mã mới
+                      </button>
+                    </label>
                     <input 
                       type="text"
                       value={params.note}
-                      onChange={(e) => setParams({ ...params, note: e.target.value })}
-                      className="w-full bg-[#fdfdfd] border border-[#e2e8f0] rounded-xl px-4 py-2.5 text-sm font-semibold focus:ring-1 focus:ring-[#2563eb] outline-none"
+                      onChange={(e) => setParams({ ...params, note: e.target.value.toUpperCase() })}
+                      className="w-full bg-[#fdfdfd] border border-[#e2e8f0] rounded-xl px-4 py-2.5 text-sm font-bold tracking-widest text-[#1e293b] focus:ring-1 focus:ring-[#2563eb] outline-none"
                     />
                   </div>
                 </div>
@@ -1281,9 +1288,9 @@ export default function App() {
                              </div>
                            </div>
 
-                           {/* Row 2: Color Name, SKU Code & Hex Picker */}
+                           {/* Row 2: Color Name & Hex Picker */}
                            <div className="flex gap-2">
-                             <div className="flex-[2]">
+                             <div className="flex-1">
                                <label className="text-[10px] font-bold text-[#64748b] uppercase block mb-1">Màu sắc</label>
                                <input 
                                  defaultValue={m.color} 
@@ -1292,17 +1299,8 @@ export default function App() {
                                  className="w-full h-9 text-xs font-bold text-[#2563eb] bg-white border border-[#e2e8f0] px-3 rounded-lg outline-none focus:ring-1 focus:ring-[#2563eb]"
                                />
                              </div>
-                             <div className="flex-1">
-                               <label className="text-[10px] font-bold text-[#64748b] uppercase block mb-1">Mã Nhựa</label>
-                               <input 
-                                 defaultValue={m.code || ''} 
-                                 onBlur={(e) => handleMaterialUpdate(m.id, { code: e.target.value.toUpperCase() })}
-                                 placeholder="ABC123"
-                                 className="w-full h-9 text-xs font-black text-[#1e293b] bg-[#f8fafc] border border-[#e2e8f0] px-2 rounded-lg outline-none focus:ring-1 focus:ring-[#2563eb] uppercase text-center"
-                               />
-                             </div>
                              <div className="shrink-0">
-                               <label className="text-[10px] font-bold text-[#64748b] uppercase block mb-1">Hex</label>
+                               <label className="text-[10px] font-bold text-[#64748b] uppercase block mb-1">Mã</label>
                                <ColorPicker defaultColor={m.colorHex || '#000000'} onBlur={(hex) => handleMaterialUpdate(m.id, { colorHex: hex })} />
                              </div>
                            </div>

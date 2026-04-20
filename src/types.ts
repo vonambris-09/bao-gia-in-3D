@@ -1,6 +1,5 @@
 export interface Material {
   id: string;
-  code?: string;
   name: string;
   brand: string;
   pricePerKg: number;
