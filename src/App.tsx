@@ -66,6 +66,45 @@ const generateShortId = () => {
   return result;
 };
 
+// Helper to calculate delivery time
+const getDeliveryTime = (hours: number, minutes: number, safetyBuffer: number) => {
+  const now = new Date();
+  let startTime = new Date(now);
+  const currentHour = now.getHours();
+
+  // 1. Setup window: Non-working hours 20:00 to 07:00
+  if (currentHour >= 20) {
+    startTime.setDate(now.getDate() + 1);
+    startTime.setHours(7, 0, 0, 0);
+  } else if (currentHour < 7) {
+    startTime.setHours(7, 0, 0, 0);
+  }
+
+  // 2. Machine runs 24/7
+  const deliveryTime = new Date(startTime.getTime());
+  deliveryTime.setHours(deliveryTime.getHours() + hours + safetyBuffer);
+  deliveryTime.setMinutes(deliveryTime.getMinutes() + minutes);
+
+  // 3. Delivery window: If finished after 17:00 (5 PM), deliver at 07:00 next day
+  const deliveryHour = deliveryTime.getHours();
+  if (deliveryHour >= 17) {
+    deliveryTime.setDate(deliveryTime.getDate() + 1);
+    deliveryTime.setHours(7, 0, 0, 0);
+  } else if (deliveryHour < 7) {
+    deliveryTime.setHours(7, 0, 0, 0);
+  }
+
+  return deliveryTime;
+};
+
+const formatDate = (date: Date) => {
+  const h = date.getHours().toString().padStart(2, '0');
+  const d = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const y = date.getFullYear();
+  return `${h}h00 - ${d}/${month}/${y}`;
+};
+
 const ColorPicker = ({ defaultColor, onBlur }: { defaultColor: string, onBlur: (hex: string) => void }) => {
   const [color, setColor] = useState(defaultColor);
   return (
@@ -874,6 +913,18 @@ export default function App() {
                         <div className="text-right">
                           <p className="text-xs font-bold text-[#64748b] uppercase mb-0.5">Độ dày Infill</p>
                           <p className="font-bold">{params.infillPercent}%</p>
+                        </div>
+                        <div className="col-span-2 mt-4 pt-4 border-t border-dashed border-[#e2e8f0]">
+                          <p className="text-xs font-bold text-[#64748b] uppercase mb-1.5 flex items-center gap-1.5">
+                            <Clock size={12} className="text-[#2563eb]" /> 
+                            Nhận hàng chậm nhất
+                          </p>
+                          <p className="font-bold text-[#2563eb]">
+                            {formatDate(getDeliveryTime(params.hours, params.minutes, 5))}
+                          </p>
+                          <p className="text-[10px] text-[#64748b] mt-2 italic leading-relaxed">
+                            Nếu quý khách cần gấp có thể trả thêm phí dịch vụ in nhanh, nhận hàng vào lúc: <span className="font-black text-[#b91c1c]">{formatDate(getDeliveryTime(params.hours, params.minutes, 1))}</span>. Phí dịch vụ +20%
+                          </p>
                         </div>
                       </div>
                     </div>
