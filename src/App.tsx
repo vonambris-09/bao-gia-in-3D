@@ -160,6 +160,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
+  const [qrLoading, setQrLoading] = useState(false);
   const quoteRef = useRef<HTMLElement>(null);
   
   // State for Settings
@@ -414,8 +415,18 @@ export default function App() {
     };
   }, [params, systemSettings, selectedMaterial]);
 
+  const qrUrl = `https://qr.limcorp.vn/qrcode.png?bank=970448&&number=0344970774&amount=${results.customerTotal}&content=${encodeURIComponent(params.note)}`;
+
+  useEffect(() => {
+    setQrLoading(true);
+  }, [results.customerTotal, params.note]);
+
   const handleExportImage = async () => {
     if (!quoteRef.current) return;
+    if (qrLoading) {
+      alert('Vui lòng đợi trong giây lát, QR Code thanh toán đang được cập nhật...');
+      return;
+    }
     try {
       setIsCopying(true);
       const dataUrl = await htmlToImage.toPng(quoteRef.current, {
@@ -443,6 +454,10 @@ export default function App() {
 
   const handleExportPDF = async () => {
     if (!quoteRef.current) return;
+    if (qrLoading) {
+      alert('Vui lòng đợi trong giây lát, QR Code thanh toán đang được cập nhật...');
+      return;
+    }
     try {
       const dataUrl = await htmlToImage.toPng(quoteRef.current, {
         quality: 1,
@@ -1003,12 +1018,23 @@ export default function App() {
                   {/* QR, Payment & Bank Section */}
                   <div className="mt-auto border-t border-[#e2e8f0] pt-8 flex items-end justify-between gap-8">
                     <div className="flex items-center gap-8 flex-1">
-                      <div className="p-1.5 bg-white border border-[#e2e8f0] rounded-2xl shadow-sm overflow-hidden flex items-center justify-center">
+                      <div className="p-1.5 bg-white border border-[#e2e8f0] rounded-2xl shadow-sm overflow-hidden flex items-center justify-center relative w-[122px] h-[122px]">
+                         {qrLoading && (
+                           <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 z-10 gap-1.5">
+                             <Loader2 size={18} className="text-[#2563eb] animate-spin" />
+                             <span className="text-[7px] text-[#2563eb] font-black uppercase tracking-widest">Đang tải QR</span>
+                           </div>
+                         )}
                          <img 
-                           src={`https://qr.limcorp.vn/qrcode.png?bank=970448&&number=0344970774&amount=${results.customerTotal}&content=${encodeURIComponent(params.note)}`}
+                           key={qrUrl}
+                           src={qrUrl}
                            alt="Chuyển khoản QR"
-                           className="w-[110px] h-[110px] object-contain"
+                           className={cn(
+                             "w-[110px] h-[110px] object-contain transition-all duration-300",
+                             qrLoading ? "opacity-20 blur-[1.5px] scale-95" : "opacity-100 blur-0 scale-100"
+                           )}
                            referrerPolicy="no-referrer"
+                           onLoad={() => setQrLoading(false)}
                          />
                       </div>
                       <div className="space-y-4">
