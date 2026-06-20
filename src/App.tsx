@@ -160,7 +160,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
-  const [qrLoading, setQrLoading] = useState(false);
+  const [loadedQrUrl, setLoadedQrUrl] = useState<string>('');
   const quoteRef = useRef<HTMLElement>(null);
   
   // State for Settings
@@ -416,10 +416,7 @@ export default function App() {
   }, [params, systemSettings, selectedMaterial]);
 
   const qrUrl = `https://qr.limcorp.vn/qrcode.png?bank=970448&&number=0344970774&amount=${results.customerTotal}&content=${encodeURIComponent(params.note)}`;
-
-  useEffect(() => {
-    setQrLoading(true);
-  }, [results.customerTotal, params.note]);
+  const qrLoading = loadedQrUrl !== qrUrl;
 
   const handleExportImage = async () => {
     if (!quoteRef.current) return;
@@ -929,18 +926,6 @@ export default function App() {
                           <p className="text-xs font-bold text-[#64748b] uppercase mb-0.5">Độ dày Infill</p>
                           <p className="font-bold">{params.infillPercent}%</p>
                         </div>
-                        <div className="col-span-2 mt-4 pt-4 border-t border-dashed border-[#e2e8f0]">
-                          <p className="text-xs font-bold text-[#64748b] uppercase mb-1.5 flex items-center gap-1.5">
-                            <Clock size={12} className="text-[#2563eb]" /> 
-                            Nhận hàng chậm nhất
-                          </p>
-                          <p className="font-bold text-[#2563eb]">
-                            {formatDate(getDeliveryTime(params.hours, params.minutes, 5))}
-                          </p>
-                          <p className="text-[10px] text-[#64748b] mt-2 italic leading-relaxed">
-                            Nếu quý khách cần gấp có thể trả thêm phí dịch vụ in nhanh, nhận hàng vào lúc: <span className="font-black text-[#b91c1c]">{formatDate(getDeliveryTime(params.hours, params.minutes, 1))}</span>. Phí dịch vụ +20%
-                          </p>
-                        </div>
                       </div>
                     </div>
 
@@ -1034,7 +1019,7 @@ export default function App() {
                              qrLoading ? "opacity-20 blur-[1.5px] scale-95" : "opacity-100 blur-0 scale-100"
                            )}
                            referrerPolicy="no-referrer"
-                           onLoad={() => setQrLoading(false)}
+                           onLoad={() => setLoadedQrUrl(qrUrl)}
                          />
                       </div>
                       <div className="space-y-4">
