@@ -39,7 +39,6 @@ import {
   Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import QRCode from 'react-qr-code';
 import { cn, formatCurrency } from '@/lib/utils';
 import { Material, SystemSettings, QuoteParams, CalculationResult } from './types';
 import { auth, db, signIn, logOut, handleFirestoreError } from '@/lib/firebase';
@@ -66,46 +65,11 @@ const generateShortId = () => {
   return result;
 };
 
-// Helper to calculate delivery time
-const getDeliveryTime = (hours: number, minutes: number, safetyBuffer: number) => {
-  const now = new Date();
-  let startTime = new Date(now);
-  const currentHour = now.getHours();
+// Ghi chú: getDeliveryTime() và formatDate() đã được chuyển sang
+// src/lib/delivery.ts — chúng chưa từng được gọi ở đây. Logic vẫn còn nguyên
+// để nối vào báo giá sau (khách rất hay hỏi "khi nào xong?").
 
-  // 1. Setup window: Non-working hours 20:00 to 07:00
-  if (currentHour >= 20) {
-    startTime.setDate(now.getDate() + 1);
-    startTime.setHours(7, 0, 0, 0);
-  } else if (currentHour < 7) {
-    startTime.setHours(7, 0, 0, 0);
-  }
-
-  // 2. Machine runs 24/7
-  const deliveryTime = new Date(startTime.getTime());
-  deliveryTime.setHours(deliveryTime.getHours() + hours + safetyBuffer);
-  deliveryTime.setMinutes(deliveryTime.getMinutes() + minutes);
-
-  // 3. Delivery window: If finished after 17:00 (5 PM), deliver at 07:00 next day
-  const deliveryHour = deliveryTime.getHours();
-  if (deliveryHour >= 17) {
-    deliveryTime.setDate(deliveryTime.getDate() + 1);
-    deliveryTime.setHours(7, 0, 0, 0);
-  } else if (deliveryHour < 7) {
-    deliveryTime.setHours(7, 0, 0, 0);
-  }
-
-  return deliveryTime;
-};
-
-const formatDate = (date: Date) => {
-  const h = date.getHours().toString().padStart(2, '0');
-  const d = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const y = date.getFullYear();
-  return `${h}h00 - ${d}/${month}/${y}`;
-};
-
-const ColorPicker = ({ defaultColor, onBlur }: { defaultColor: string, onBlur: (hex: string) => void }) => {
+const ColorPicker =({ defaultColor, onBlur }: { defaultColor: string, onBlur: (hex: string) => void }) => {
   const [color, setColor] = useState(defaultColor);
   return (
     <div className="w-9 h-9 rounded-lg relative border border-[#e2e8f0] overflow-hidden shadow-sm" style={{ backgroundColor: color }}>
@@ -183,6 +147,20 @@ export default function App() {
   // Offline Sync State
   const [pendingSync, setPendingSync] = useState(() => localStorage.getItem('pending_sync') === 'true');
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Rules mới có thể từ chối ghi (sai tài khoản, rules chưa deploy, dữ liệu
+  // không hợp lệ). Trước đây lỗi bị nuốt im lặng: vật liệu biến mất trên máy
+  // rồi lát sau tự hiện lại khi snapshot về, không hiểu vì sao.
+  const [permissionError, setPermissionError] = useState<string | null>(null);
+
+  const reportWriteError = (e: any, what: string) => {
+    if (e?.code === 'permission-denied') {
+      setPermissionError(
+        `Firestore từ chối thao tác "${what}". Kiểm tra: (1) đang đăng nhập đúng email admin, ` +
+        `(2) firestore.rules đã deploy, (3) dữ liệu hợp lệ (giá > 0, tên không rỗng).`
+      );
+    }
+  };
 
   // Auth Listener
   useEffect(() => {
@@ -291,10 +269,6 @@ export default function App() {
     }
   };
 
-  const handleMigrateOldData = async () => {
-    // Deleted since migration was successful
-  };
-
   const handleSyncToFirebase = async () => {
     if (!user) return;
     setIsSyncing(true);
@@ -308,9 +282,24 @@ export default function App() {
       const toDelete = remoteIds.filter(id => !localIds.includes(id));
       const deletePromises = toDelete.map(id => deleteDoc(doc(db, 'materials', id)));
       
-      // Upsert local changes
+      // Upsert local changes.
+      // `createdAt` phải luôn do server đặt: rules chặn timestamp do client
+      // tự bịa khi create (security_spec #6) và chặn sửa createdAt khi update.
+      // Nếu vẫn spread `...m` nguyên vẹn thì giá trị createdAt cục bộ
+      // ({ seconds: Date.now()/1000 }) sẽ làm mọi lệnh ghi bị từ chối.
       const writePromises = materials.map(m => {
-        return setDoc(doc(db, 'materials', m.id), { ...m, ownerId: user.uid, updatedAt: serverTimestamp() }, { merge: true });
+        const { createdAt: _clientCreatedAt, ...rest } = m;
+        const isNewOnServer = !remoteIds.includes(m.id);
+        return setDoc(
+          doc(db, 'materials', m.id),
+          {
+            ...rest,
+            ownerId: user.uid,
+            ...(isNewOnServer ? { createdAt: serverTimestamp() } : {}),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
       });
 
       // Sync settings
@@ -343,7 +332,7 @@ export default function App() {
         ownerId: user.uid
       }));
     } catch (e) {
-      console.warn("Saved settings locally. Enabling offline mode.");
+      reportWriteError(e, 'lưu cài đặt');
     }
   };
 
@@ -371,6 +360,9 @@ export default function App() {
 
   const [inventorySearch, setInventorySearch] = useState('');
   const [inventoryStockFilter, setInventoryStockFilter] = useState<'all' | 'in' | 'out'>('all');
+
+  // Xác nhận trước khi xoá vật liệu (P0.5)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Keep a ref of quoteCategory to avoid Firebase listener resubscription loops
   const quoteCategoryRef = useRef(quoteCategory);
@@ -509,7 +501,7 @@ export default function App() {
     try {
       await safeCloudWrite(setDoc(materialRef, { ...newMaterial, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
     } catch (e: any) {
-      // Offline mode enabled
+      reportWriteError(e, 'thêm vật liệu');
     }
   };
 
@@ -527,7 +519,7 @@ export default function App() {
         updatedAt: serverTimestamp()
       }, { merge: true }));
     } catch (e: any) {
-      // Offline mode enabled
+      reportWriteError(e, 'sửa vật liệu');
     }
   };
 
@@ -546,7 +538,7 @@ export default function App() {
     try {
       await safeCloudWrite(deleteDoc(doc(db, 'materials', id)));
     } catch (e) {
-      // Offline mode enabled
+      reportWriteError(e, 'xoá vật liệu');
     }
   };
 
@@ -658,7 +650,21 @@ export default function App() {
           )}
         </nav>
       </header>
-        
+
+      {permissionError && (
+        <div className="px-8 py-3 bg-red-50 border-b border-red-200 flex items-start gap-3">
+          <XCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
+          <p className="flex-1 text-xs font-bold text-red-700 leading-relaxed">{permissionError}</p>
+          <button
+            onClick={() => setPermissionError(null)}
+            className="p-1 text-red-400 hover:text-red-600 hover:bg-red-100 rounded-md transition-colors shrink-0"
+            title="Đóng"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       <main className="flex-1 p-4 grid grid-cols-[320px_1fr_300px] gap-4">
         {activeTab === 'quote' ? (
           <>
@@ -1317,12 +1323,38 @@ export default function App() {
                                }}
                              />
                           </label>
-                          <button 
-                            onClick={() => handleMaterialDelete(m.id)}
-                            className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                          <button
+                            onClick={() => setConfirmDeleteId(m.id)}
+                            title="Xoá vật liệu"
+                            className="absolute top-2 right-2 z-10 p-1.5 bg-white text-red-500 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                           >
                             <Trash2 size={14} />
                           </button>
+
+                          {/* Bước xác nhận — trước đây một cú chạm nhầm là mất
+                              vật liệu, không hoàn tác được (P0.5) */}
+                          {confirmDeleteId === m.id && (
+                            <div className="absolute inset-0 z-20 bg-[#1e293b]/90 flex flex-col items-center justify-center gap-1.5 px-3 text-center">
+                              <p className="text-[11px] font-black text-white uppercase tracking-wide leading-tight">
+                                Xoá {m.category || 'PLA'} {m.brand}?
+                              </p>
+                              <p className="text-[9px] font-bold text-white/50">Không hoàn tác được</p>
+                              <div className="flex gap-2 mt-1">
+                                <button
+                                  onClick={() => { setConfirmDeleteId(null); handleMaterialDelete(m.id); }}
+                                  className="px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase tracking-wide shadow-sm active:scale-95 transition-all"
+                                >
+                                  Xoá
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDeleteId(null)}
+                                  className="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-[10px] font-black uppercase tracking-wide active:scale-95 transition-all"
+                                >
+                                  Huỷ
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                         <div className="p-4 space-y-1.5">
                            {/* Row 1: Category & Brand */}
