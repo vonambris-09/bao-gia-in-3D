@@ -17,8 +17,13 @@ export interface SystemSettings {
   machinePowerW: number;
   electricityPriceKwh: number;
   depreciationPerHour: number;
+  /** Hệ số nhân từ giá vốn ra giá bán. Trước đây bị hard-code 2.25 trong code. */
+  markupMultiplier?: number;
   serviceNotes?: string;
 }
+
+/** Dùng khi settings chưa tải xong hoặc thiếu field (dữ liệu cũ). */
+export const DEFAULT_MARKUP = 2.25;
 
 export interface QuoteParams {
   materialId: string;
