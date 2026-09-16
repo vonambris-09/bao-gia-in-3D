@@ -1,22 +1,129 @@
 rules_version = '2';
 
+// ============================================================================
+// Báo Giá In 3D — Firestore Security Rules
+//
+// Triển khai các bất biến (invariants) và 12 payload trong security_spec.md.
+//
+// ⚠️  DANH SÁCH ADMIN nằm ở hàm isAdmin() bên dưới. Thêm/bớt email tại đó.
+//     Sai email = bạn tự khoá mình khỏi app, nên kiểm tra kỹ trước khi deploy.
+//
+// Deploy:  firebase deploy --only firestore:rules
+// Test:    npm run test:rules
+// ============================================================================
+
 service cloud.firestore {
   match /databases/{database}/documents {
-  
+
+    // ------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------
+
+    // Chỉ những email trong danh sách này mới được dùng app.
+    // Trước đây rules chỉ kiểm tra `request.auth != null`, nghĩa là BẤT KỲ
+    // tài khoản Google nào cũng đăng nhập và ghi dữ liệu được → tiêu quota
+    // Firestore trên project của bạn.
+    function isAdmin() {
+      return request.auth != null
+          && request.auth.token.email_verified == true
+          && request.auth.token.email in [
+               'vonam.bris@gmail.com'
+             ];
+    }
+
+    // Lưu ý: cố tình KHÔNG viết `resource != null && ...`.
+    // Với thao tác `list`, Firestore phải chứng minh được truy vấn chỉ trả về
+    // document hợp lệ ("rules không phải bộ lọc"); thêm điều kiện null vào đây
+    // có thể phá bước phân tích đó. Với document không tồn tại, `resource.data`
+    // làm biểu thức thành false — đúng kết quả mong muốn.
+    function ownsExisting() {
+      return resource.data.ownerId == request.auth.uid;
+    }
+
+    // Spec #4 resourcePoisoning, #5 dosAttack, #12 schemaViolation.
+    // Cố tình khoan dung với các field tuỳ chọn để dữ liệu cũ (thiếu field)
+    // vẫn sửa được — nhưng chặn cứng sai kiểu và chuỗi khổng lồ.
+    function isValidMaterial(d) {
+      return d.ownerId is string
+          && d.name is string     && d.name.size() > 0 && d.name.size() <= 120
+          && d.pricePerKg is number && d.pricePerKg > 0 && d.pricePerKg <= 100000000
+          && (!('brand'    in d) || (d.brand    is string && d.brand.size()    <= 120))
+          && (!('color'    in d) || (d.color    is string && d.color.size()    <= 120))
+          && (!('category' in d) || (d.category is string && d.category.size() <= 40))
+          && (!('colorHex' in d) || (d.colorHex is string && d.colorHex.matches('^#[0-9a-fA-F]{3,8}$')))
+          && (!('inStock'  in d) || d.inStock is bool)
+          // Ảnh đang lưu base64 thẳng trong document. Firestore giới hạn cứng
+          // 1 MiB/doc — chặn ở 900k để không bao giờ chạm trần.
+          // (Xem P0.4 trong báo cáo: nên chuyển sang Firebase Storage.)
+          && (!('imageUrl' in d) || (d.imageUrl is string && d.imageUrl.size() <= 900000));
+    }
+
+    // Spec #11 privilegeEscalation — hasOnly() chặn việc nhét field lạ
+    // (ví dụ `isAdmin: true`) vào document settings.
+    // Danh sách đã kèm sẵn các field của đợt 2 để không phải deploy rules lại.
+    function isValidSettings(d) {
+      return d.keys().hasOnly([
+               'machinePowerW', 'electricityPriceKwh', 'depreciationPerHour',
+               'serviceNotes', 'ownerId',
+               // dự phòng cho đợt 2 (P1.2):
+               'markupMultiplier', 'wastagePercent', 'minimumCharge', 'laborCostPerHour'
+             ])
+          && d.machinePowerW is number       && d.machinePowerW > 0        && d.machinePowerW <= 100000
+          && d.electricityPriceKwh is number && d.electricityPriceKwh >= 0 && d.electricityPriceKwh <= 10000000
+          && d.depreciationPerHour is number && d.depreciationPerHour >= 0 && d.depreciationPerHour <= 10000000
+          && (!('serviceNotes' in d) || (d.serviceNotes is string && d.serviceNotes.size() <= 20000));
+    }
+
+    // ------------------------------------------------------------------
+    // /materials/{materialId}
+    // ------------------------------------------------------------------
     match /materials/{materialId} {
-      allow read, delete: if request.auth != null && (resource == null || resource.data.ownerId == request.auth.uid);
-      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.ownerId == request.auth.uid;
+
+      // #1 authRequired, #8 piiLeak, #9 queryScraping
+      // (client luôn query kèm `where('ownerId','==',uid)` nên list cũng khớp)
+      allow read: if isAdmin() && ownsExisting();
+
+      // #10 unauthorizedDeletion
+      allow delete: if isAdmin() && ownsExisting();
+
+      // #2 identitySpoofing, #6 temporalIntegrity
+      allow create: if isAdmin()
+                    && request.resource.data.ownerId == request.auth.uid
+                    && request.resource.data.createdAt == request.time
+                    && isValidMaterial(request.resource.data);
+
+      // #3 immutabilityViolation — đây là lỗ hổng chính của rules cũ:
+      // chủ sở hữu cũ đổi được ownerId sang UID người khác.
+      // #7 relationalViolation
+      // Dùng get(...,null) thay vì truy cập thẳng: dữ liệu cũ có thể hoàn toàn
+      // không có field createdAt, khi đó `resource.data.createdAt` sẽ ném lỗi
+      // và khoá luôn việc sửa những vật liệu cũ đó.
+      allow update: if isAdmin()
+                    && ownsExisting()
+                    && request.resource.data.ownerId == resource.data.ownerId
+                    && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null)
+                    && isValidMaterial(request.resource.data);
     }
 
+    // ------------------------------------------------------------------
+    // /settings/{userId}
+    // ------------------------------------------------------------------
     match /settings/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isAdmin() && request.auth.uid == userId;
+
+      // Bất biến #2: ID document phải trùng UID của chủ sở hữu.
+      allow write: if isAdmin()
+                   && request.auth.uid == userId
+                   && request.resource.data.ownerId == request.auth.uid
+                   && isValidSettings(request.resource.data);
     }
 
-    match /test/connection {
-      allow read: if true;
-    }
-
+    // ------------------------------------------------------------------
+    // Từ chối mọi thứ còn lại.
+    //
+    // Rule cũ có `match /test/connection { allow read: if true; }` — mở đọc
+    // công khai chỉ để hàm testConnection() log ra console. Đã xoá cả hai.
+    // ------------------------------------------------------------------
     match /{document=**} {
       allow read, write: if false;
     }

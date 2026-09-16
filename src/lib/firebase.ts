@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
@@ -22,17 +22,10 @@ export async function logOut() {
   await signOut(auth);
 }
 
-// CRITICAL CONSTRAINT: Test connection on boot
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error: any) {
-    if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
-    }
-  }
-}
-testConnection();
+// Đã bỏ testConnection(): nó đọc /test/connection lúc khởi động chỉ để ghi log,
+// và buộc firestore.rules phải mở `allow read: if true` cho đường dẫn đó —
+// điểm công khai duy nhất trong toàn bộ rules. Firestore SDK đã tự báo lỗi
+// kết nối qua các listener onSnapshot rồi.
 
 export interface FirestoreErrorInfo {
   error: string;
