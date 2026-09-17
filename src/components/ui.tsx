@@ -8,45 +8,44 @@ import { cn } from '@/lib/utils';
 
 /* ==========================================================================
    Chuyển động
-   iOS dùng spring chứ không dùng thời lượng cố định — chạm vào thấy "có khối
-   lượng" chứ không phải chạy hết một đoạn animation.
+
+   QUAN TRỌNG: chỉ animate `transform` (scale/x/y) và `opacity`.
+   Bản trước giật vì animate cả màu, bóng và layout — những thứ buộc trình
+   duyệt tính lại style và bố cục mỗi khung hình.
    ========================================================================== */
 
-export const spring: Transition = { type: 'spring', stiffness: 420, damping: 32, mass: 0.7 };
-export const springSoft: Transition = { type: 'spring', stiffness: 260, damping: 30 };
-export const springSheet: Transition = { type: 'spring', stiffness: 300, damping: 34 };
-
-/** Hiệu ứng nhấn: thu nhỏ nhẹ, bật lại ngay — giống nút trên iOS. */
-export const tap = { whileTap: { scale: 0.96 }, transition: spring };
+export const spring: Transition = { type: 'spring', stiffness: 460, damping: 34, mass: 0.6 };
+export const springSoft: Transition = { type: 'spring', stiffness: 300, damping: 32 };
+export const springSheet: Transition = { type: 'spring', stiffness: 340, damping: 36 };
 
 /* ==========================================================================
-   Thẻ
+   Thẻ kính
    ========================================================================== */
 
 export function Card({
-  children, className, title, icon, action, padded = true,
+  children, className, title, icon, action, padded = true, glow = false,
 }: {
   children: ReactNode; className?: string; title?: string;
-  icon?: ReactNode; action?: ReactNode; padded?: boolean;
+  icon?: ReactNode; action?: ReactNode; padded?: boolean; glow?: boolean;
 }) {
   return (
     <div
-      data-themed
       className={cn(
-        'bg-surface border border-line rounded-2xl shadow-card overflow-hidden',
+        'lit lit-strong bg-surface border border-line rounded-[20px] overflow-hidden',
+        glow ? 'shadow-glow' : 'shadow-card',
         className
       )}
     >
       {title && (
-        <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-1">
+        <div className="flex items-center justify-between gap-2 px-5 pt-4 pb-1">
           <div className="flex items-center gap-2 text-ink-soft min-w-0">
             {icon}
-            <h2 className="font-bold text-[11px] uppercase tracking-[0.12em] truncate">{title}</h2>
+            <h2 className="font-bold text-2xs uppercase tracking-[0.13em] truncate">{title}</h2>
           </div>
           {action}
         </div>
       )}
-      <div className={cn(padded && 'p-4', title && padded && 'pt-3')}>{children}</div>
+      <div className={cn(padded && 'p-5', title && padded && 'pt-3')}>{children}</div>
     </div>
   );
 }
@@ -59,8 +58,8 @@ export function Field({
   label, children, hint, className,
 }: { label: string; children: ReactNode; hint?: string; className?: string }) {
   return (
-    <label className={cn('block space-y-1.5', className)}>
-      <span className="text-[11px] font-bold text-ink-soft px-0.5 flex items-center justify-between gap-2">
+    <label className={cn('block space-y-2', className)}>
+      <span className="text-2xs font-bold text-ink-soft px-0.5 flex items-center justify-between gap-2">
         <span className="truncate">{label}</span>
         {hint && <span className="text-ink-faint font-semibold shrink-0">{hint}</span>}
       </span>
@@ -69,11 +68,11 @@ export function Field({
   );
 }
 
+/* Chỉ transition box-shadow khi focus — một phần tử tại một thời điểm, không đáng kể. */
 const controlBase =
-  'w-full bg-surface-2 border border-line rounded-xl px-3.5 py-2.5 text-sm font-semibold text-ink ' +
-  'outline-none transition-[box-shadow,border-color] duration-200 ' +
-  'focus:border-brand focus:shadow-[0_0_0_3.5px_var(--ring)] ' +
-  'disabled:opacity-50';
+  'w-full bg-surface-2 border border-line rounded-xl px-4 py-3 text-sm font-semibold text-ink ' +
+  'outline-none focus:border-brand focus:shadow-[0_0_0_4px_var(--ring)] ' +
+  'disabled:opacity-50 placeholder:text-ink-faint';
 
 export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={cn(controlBase, props.className)} />;
@@ -87,13 +86,13 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
       {...props}
-      className={cn(controlBase, 'appearance-none cursor-pointer pr-8', props.className)}
+      className={cn(controlBase, 'appearance-none cursor-pointer pr-9', props.className)}
       style={{
         backgroundImage:
-          "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236e6e76' stroke-width='3' stroke-linecap='round'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e\")",
+          "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23708098' stroke-width='3' stroke-linecap='round'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e\")",
         backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'right 10px center',
-        backgroundSize: '14px',
+        backgroundPosition: 'right 12px center',
+        backgroundSize: '15px',
         ...props.style,
       }}
     />
@@ -112,25 +111,26 @@ type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 export function Button({ variant = 'plain', size = 'md', icon, children, className, ...rest }: BtnProps) {
   const variants = {
-    brand: 'bg-brand text-brand-ink shadow-card hover:brightness-110',
-    plain: 'bg-surface-2 text-ink border border-line hover:bg-surface-3',
-    ghost: 'text-ink-soft hover:bg-surface-2 hover:text-ink',
-    danger: 'bg-danger text-white shadow-card hover:brightness-110',
-    warn: 'bg-warn text-[#1c1c1e] shadow-card hover:brightness-105',
+    brand: 'text-brand-ink shadow-glow border border-white/15 ' +
+           'bg-[linear-gradient(135deg,var(--brand),var(--brand-2))]',
+    plain: 'bg-surface-2 text-ink border border-line lit',
+    ghost: 'text-ink-soft border border-transparent',
+    danger: 'bg-danger text-white shadow-card border border-white/15',
+    warn: 'bg-warn text-[#1a1205] shadow-card border border-white/20',
   };
   const sizes = {
-    sm: 'px-3 py-1.5 text-[11px] gap-1.5 rounded-lg',
-    md: 'px-4 py-2.5 text-sm gap-2 rounded-xl',
-    lg: 'px-5 py-3 text-base gap-2 rounded-2xl',
+    sm: 'px-3.5 py-2 text-2xs gap-1.5 rounded-lg',
+    md: 'px-5 py-3 text-sm gap-2 rounded-xl',
+    lg: 'px-6 py-3.5 text-base gap-2.5 rounded-2xl',
   };
   return (
     <motion.button
-      whileTap={{ scale: 0.96 }}
+      whileTap={{ scale: 0.95 }}
       transition={spring}
       {...(rest as any)}
       className={cn(
-        'inline-flex items-center justify-center font-bold whitespace-nowrap',
-        'transition-[filter,background-color] duration-200 disabled:opacity-50 disabled:pointer-events-none',
+        'inline-flex items-center justify-center font-bold whitespace-nowrap select-none',
+        'disabled:opacity-45 disabled:pointer-events-none',
         variants[variant], sizes[size], className
       )}
     >
@@ -141,24 +141,20 @@ export function Button({ variant = 'plain', size = 'md', icon, children, classNa
 }
 
 /* ==========================================================================
-   Segmented control — thanh chọn kiểu iOS, con trượt bám theo mục đang chọn
+   Segmented control — con trượt dùng layoutId, motion chạy nó bằng transform
    ========================================================================== */
 
 export function Segmented<T extends string>({
-  value, onChange, options, layoutId, className, size = 'md',
+  value, onChange, options, layoutId, className,
 }: {
   value: T;
   onChange: (v: T) => void;
   options: { value: T; label: string; icon?: ReactNode }[];
   layoutId: string;
   className?: string;
-  size?: 'sm' | 'md';
 }) {
   return (
-    <div
-      data-themed
-      className={cn('inline-flex bg-surface-2 border border-line rounded-xl p-1 gap-1', className)}
-    >
+    <div className={cn('lit inline-flex bg-surface-2 border border-line rounded-xl p-1 gap-1', className)}>
       {options.map(o => {
         const active = o.value === value;
         return (
@@ -168,22 +164,19 @@ export function Segmented<T extends string>({
             whileTap={{ scale: 0.95 }}
             transition={spring}
             className={cn(
-              'relative flex-1 inline-flex items-center justify-center gap-1.5 font-bold rounded-lg',
-              'transition-colors duration-200 whitespace-nowrap',
-              size === 'sm' ? 'px-2.5 py-1 text-[10px]' : 'px-3.5 py-1.5 text-xs',
-              active ? 'text-brand-ink' : 'text-ink-soft hover:text-ink'
+              'relative flex-1 inline-flex items-center justify-center gap-2 font-bold rounded-lg',
+              'px-4 py-2 text-xs whitespace-nowrap',
+              active ? 'text-brand-ink' : 'text-ink-soft'
             )}
           >
             {active && (
               <motion.span
                 layoutId={layoutId}
                 transition={springSoft}
-                className="absolute inset-0 bg-brand rounded-lg shadow-card"
+                className="absolute inset-0 rounded-lg shadow-glow bg-[linear-gradient(135deg,var(--brand),var(--brand-2))]"
               />
             )}
-            <span className="relative z-10 inline-flex items-center gap-1.5">
-              {o.icon}{o.label}
-            </span>
+            <span className="relative z-10 inline-flex items-center gap-2">{o.icon}{o.label}</span>
           </motion.button>
         );
       })}
@@ -192,7 +185,8 @@ export function Segmented<T extends string>({
 }
 
 /* ==========================================================================
-   Công tắc bật/tắt kiểu iOS
+   Công tắc — núm chạy bằng transform, KHÔNG dùng `layout` (layout phải đo lại
+   bố cục mỗi khung hình; transform thì không)
    ========================================================================== */
 
 export function Switch({
@@ -205,22 +199,21 @@ export function Switch({
       aria-label={label}
       onClick={() => onChange(!checked)}
       className={cn(
-        'relative w-[46px] h-[28px] rounded-full shrink-0 transition-colors duration-300',
-        checked ? 'bg-ok' : 'bg-surface-3'
+        'relative w-[54px] h-[32px] rounded-full shrink-0 border',
+        checked ? 'bg-ok border-white/20' : 'bg-surface-3 border-line'
       )}
     >
       <motion.span
-        layout
+        animate={{ x: checked ? 23 : 3 }}
         transition={spring}
-        className="absolute top-[2px] w-[24px] h-[24px] bg-white rounded-full shadow-float"
-        style={{ left: checked ? 20 : 2 }}
+        className="absolute top-[3px] left-0 w-[24px] h-[24px] bg-white rounded-full shadow-float"
       />
     </button>
   );
 }
 
 /* ==========================================================================
-   Sheet — trên điện thoại trượt lên từ đáy, trên máy tính là hộp thoại giữa
+   Sheet
    ========================================================================== */
 
 export function Sheet({
@@ -249,42 +242,38 @@ export function Sheet({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.18 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-black/60"
           />
           <motion.div
-            data-themed
-            initial={{ y: '100%', opacity: 0.6, scale: 0.98 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: '100%', opacity: 0.6, scale: 0.98 }}
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 40, opacity: 0 }}
             transition={springSheet}
             drag="y"
             dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0, bottom: 0.4 }}
-            onDragEnd={(_, info) => { if (info.offset.y > 110 || info.velocity.y > 600) onClose(); }}
+            dragElastic={{ top: 0, bottom: 0.35 }}
+            onDragEnd={(_, info) => { if (info.offset.y > 120 || info.velocity.y > 650) onClose(); }}
             className={cn(
-              'relative w-full sm:max-w-lg bg-surface border border-line shadow-sheet',
-              'rounded-t-[28px] sm:rounded-3xl max-h-[88vh] flex flex-col'
+              'lit lit-strong relative w-full sm:max-w-xl bg-surface-op border border-line shadow-float',
+              'rounded-t-[30px] sm:rounded-[26px] max-h-[88vh] flex flex-col'
             )}
           >
-            {/* tay nắm kéo, chỉ hiện trên điện thoại */}
-            <div className="sm:hidden pt-2.5 pb-1 flex justify-center shrink-0 cursor-grab active:cursor-grabbing">
-              <div className="w-9 h-1.5 rounded-full bg-line" />
+            <div className="sm:hidden pt-3 pb-1 flex justify-center shrink-0 cursor-grab active:cursor-grabbing">
+              <div className="w-10 h-1.5 rounded-full bg-ink-faint opacity-40" />
             </div>
 
-            <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-line shrink-0">
-              <h3 className="font-extrabold text-base text-ink truncate">{title}</h3>
-              <Button variant="ghost" size="sm" onClick={onClose} className="!p-2 rounded-full">
-                <X size={16} />
+            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-line shrink-0">
+              <h3 className="font-extrabold text-lg text-ink truncate">{title}</h3>
+              <Button variant="ghost" size="sm" onClick={onClose} className="!p-2.5 rounded-full">
+                <X size={18} />
               </Button>
             </div>
 
-            <div className="overflow-y-auto px-5 py-4 flex-1">{children}</div>
+            <div className="overflow-y-auto px-6 py-5 flex-1">{children}</div>
 
-            {footer && (
-              <div className="px-5 py-3.5 border-t border-line shrink-0 pb-safe">{footer}</div>
-            )}
+            {footer && <div className="px-6 py-4 border-t border-line shrink-0 pb-safe">{footer}</div>}
           </motion.div>
         </div>
       )}
@@ -300,18 +289,13 @@ export function Empty({
   icon, title, desc, action,
 }: { icon: ReactNode; title: string; desc?: string; action?: ReactNode }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={springSoft}
-      className="flex flex-col items-center justify-center py-14 px-6 gap-3 text-center"
-    >
-      <div className="text-ink-faint opacity-60">{icon}</div>
+    <div className="flex flex-col items-center justify-center py-16 px-6 gap-4 text-center">
+      <div className="text-ink-faint opacity-50">{icon}</div>
       <div>
-        <h3 className="font-extrabold text-ink mb-1">{title}</h3>
-        {desc && <p className="text-sm text-ink-soft max-w-xs">{desc}</p>}
+        <h3 className="font-extrabold text-ink mb-1.5 text-lg">{title}</h3>
+        {desc && <p className="text-sm text-ink-soft max-w-sm">{desc}</p>}
       </div>
       {action && <div className="mt-2">{action}</div>}
-    </motion.div>
+    </div>
   );
 }

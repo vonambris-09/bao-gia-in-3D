@@ -475,19 +475,18 @@ export default function App() {
      ========================================================================== */
 
   return (
-    <div data-themed className="min-h-screen bg-app text-ink font-sans flex flex-col">
+    <div className="min-h-screen bg-app text-ink font-sans flex flex-col">
 
       {/* ---------------------------------------------------------- Header */}
       <header
-        data-themed
-        className="sticky top-0 z-40 bg-surface/85 backdrop-blur-xl border-b border-line"
+        className="lit sticky top-0 z-40 bg-surface-op border-b border-line"
       >
-        <div className="max-w-[1680px] mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3">
+        <div className="max-w-[1680px] mx-auto px-4 sm:px-6 h-16 sm:h-[72px] flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-brand rounded-xl flex items-center justify-center text-brand-ink shrink-0 shadow-card">
-              <Printer size={17} strokeWidth={2.5} />
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-brand-ink shrink-0 shadow-glow border border-white/20 bg-[linear-gradient(135deg,var(--brand),var(--brand-2))]">
+              <Printer size={19} strokeWidth={2.5} />
             </div>
-            <span className="font-black text-brand text-lg sm:text-xl tracking-tight truncate">PLASTICALC</span>
+            <span className="hidden sm:inline font-black text-2xl tracking-tight bg-[linear-gradient(135deg,var(--brand),var(--brand-2))] bg-clip-text text-transparent">PLASTICALC</span>
           </div>
 
           {/* Tab trên máy tính */}
@@ -520,13 +519,13 @@ export default function App() {
               )}
             </AnimatePresence>
 
-            <Button variant="ghost" size="sm" onClick={() => setShowShowroom(true)} className="!p-2 rounded-full" aria-label="Showroom">
-              <Eye size={17} />
+            <Button variant="ghost" size="sm" onClick={() => setShowShowroom(true)} className="!p-2.5 rounded-full" aria-label="Showroom">
+              <Eye size={19} />
             </Button>
 
             {user && (
-              <Button variant="ghost" size="sm" onClick={() => setShowSettings(true)} className="!p-2 rounded-full" aria-label="Cài đặt">
-                <SettingsIcon size={17} />
+              <Button variant="ghost" size="sm" onClick={() => setShowSettings(true)} className="!p-2.5 rounded-full" aria-label="Cài đặt">
+                <SettingsIcon size={19} />
               </Button>
             )}
 
@@ -541,7 +540,7 @@ export default function App() {
                   transition={spring}
                   className="block"
                 >
-                  {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+                  {theme === 'dark' ? <Sun size={19} /> : <Moon size={19} />}
                 </motion.span>
               </AnimatePresence>
             </Button>
@@ -550,11 +549,11 @@ export default function App() {
 
             {user ? (
               <div className="flex items-center gap-2">
-                <span className="hidden lg:inline text-[10px] font-black text-ink-soft bg-surface-2 border border-line px-2.5 py-1.5 rounded-lg uppercase tracking-wider max-w-[130px] truncate">
+                <span className="hidden lg:inline text-2xs font-black text-ink-soft bg-surface-2 border border-line px-2.5 py-1.5 rounded-lg uppercase tracking-wider max-w-[130px] truncate">
                   {user.email?.split('@')[0]}
                 </span>
-                <Button variant="ghost" size="sm" onClick={() => logOut()} className="!p-2 rounded-full text-danger" aria-label="Đăng xuất">
-                  <LogOut size={16} />
+                <Button variant="ghost" size="sm" onClick={() => logOut()} className="!p-2.5 rounded-full text-danger" aria-label="Đăng xuất">
+                  <LogOut size={18} />
                 </Button>
               </div>
             ) : (
@@ -588,7 +587,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* ----------------------------------------------------------- Nội dung */}
-      <main className="flex-1 max-w-[1680px] w-full mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-24 md:pb-6">
+      <main className="flex-1 max-w-[1680px] w-full mx-auto px-4 sm:px-6 py-5 sm:py-7 pb-28 md:pb-8">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -598,7 +597,7 @@ export default function App() {
             transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
           >
             {activeTab === 'quote' ? (
-              <div className="grid grid-cols-1 lg:grid-cols-[330px_minmax(0,1fr)] xl:grid-cols-[330px_minmax(0,1fr)_290px] gap-4 sm:gap-5 items-start">
+              <div className="grid grid-cols-1 lg:grid-cols-[330px_minmax(0,1fr)] xl:grid-cols-[330px_minmax(0,1fr)_290px] gap-5 sm:gap-6 items-start">
 
                 {/* ------- Cột nhập liệu ------- */}
                 <div className="space-y-4 sm:space-y-5">
@@ -682,13 +681,13 @@ export default function App() {
                   </Card>
 
                   {/* Tổng kết giá */}
-                  <Card className="bg-surface-2">
+                  <Card glow className="edge-brand">
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center text-[11px] font-bold text-ink-soft uppercase tracking-wider">
+                      <div className="flex justify-between items-center text-xs font-bold text-ink-soft uppercase tracking-wider">
                         <span>Giá vốn nội bộ</span>
                         <span className="text-ink font-black">{results.internalTotal.toLocaleString('vi-VN')} đ</span>
                       </div>
-                      <div className="flex justify-between items-center text-[11px] font-bold text-ink-soft uppercase tracking-wider">
+                      <div className="flex justify-between items-center text-xs font-bold text-ink-soft uppercase tracking-wider">
                         <span>Hệ số nhân</span>
                         <button onClick={() => setShowSettings(true)} className="text-brand font-black hover:underline">
                           × {markup}
@@ -696,16 +695,10 @@ export default function App() {
                       </div>
                       <div className="h-px bg-line" />
                       <div className="flex justify-between items-end">
-                        <span className="text-[11px] font-black uppercase text-brand tracking-wider">Tổng báo giá</span>
-                        <motion.span
-                          key={results.customerTotal}
-                          initial={{ scale: 0.92, opacity: 0.5 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={spring}
-                          className="text-2xl font-black text-brand"
-                        >
+                        <span className="text-xs font-black uppercase text-brand tracking-wider">Tổng báo giá</span>
+                        <span className="text-3xl font-black bg-[linear-gradient(135deg,var(--brand),var(--brand-2))] bg-clip-text text-transparent">
                           {results.customerTotal.toLocaleString('vi-VN')} đ
-                        </motion.span>
+                        </span>
                       </div>
                     </div>
                   </Card>
@@ -816,9 +809,9 @@ export default function App() {
                   </div>
 
                   <div className="px-4 pb-4 pt-3 border-t border-line">
-                    <div className="bg-brand rounded-xl p-3 text-brand-ink">
-                      <p className="text-[10px] font-bold uppercase opacity-80">Thống kê</p>
-                      <p className="text-lg font-black tracking-tight">{filteredMaterials.length} loại nhựa</p>
+                    <div className="rounded-xl p-4 text-brand-ink shadow-glow border border-white/20 bg-[linear-gradient(135deg,var(--brand),var(--brand-2))]">
+                      <p className="text-2xs font-bold uppercase opacity-80">Thống kê</p>
+                      <p className="text-xl font-black tracking-tight">{filteredMaterials.length} loại nhựa</p>
                     </div>
                   </div>
                 </Card>
@@ -892,8 +885,7 @@ export default function App() {
                     <Empty icon={<Search size={40} strokeWidth={1.5} />} title="Không tìm thấy" desc="Thử từ khoá hoặc bộ lọc khác." />
                   </Card>
                 ) : (
-                  <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
-                    <AnimatePresence mode="popLayout">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5">
                       {filteredMaterials.map(m => (
                         <MaterialCard
                           key={m.id}
@@ -906,8 +898,7 @@ export default function App() {
                           onPickImage={file => handleImagePick(m.id, file)}
                         />
                       ))}
-                    </AnimatePresence>
-                  </motion.div>
+                  </div>
                 )}
               </div>
             )}
@@ -917,8 +908,7 @@ export default function App() {
 
       {/* ------------------------------------------------ Thanh tab dưới (mobile) */}
       <nav
-        data-themed
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/90 backdrop-blur-xl border-t border-line pb-safe"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface-op border-t border-line pb-safe"
       >
         <div className="flex items-stretch">
           {([
@@ -930,16 +920,16 @@ export default function App() {
               <button
                 key={t.id}
                 onClick={() => setActiveTab(t.id)}
-                className="relative flex-1 flex flex-col items-center gap-0.5 py-2.5"
+                className="relative flex-1 flex flex-col items-center gap-1 py-3"
               >
                 {active && (
                   <motion.span layoutId="tab-mobile" transition={springSoft}
                     className="absolute top-0 inset-x-5 h-[3px] bg-brand rounded-full" />
                 )}
                 <motion.span animate={{ scale: active ? 1.08 : 1, y: active ? -1 : 0 }} transition={spring}>
-                  <t.icon size={19} className={active ? 'text-brand' : 'text-ink-faint'} />
+                  <t.icon size={22} className={active ? 'text-brand' : 'text-ink-faint'} />
                 </motion.span>
-                <span className={cn('text-[10px] font-bold', active ? 'text-brand' : 'text-ink-faint')}>{t.label}</span>
+                <span className={cn('text-xs font-bold', active ? 'text-brand' : 'text-ink-faint')}>{t.label}</span>
               </button>
             );
           })}
@@ -969,14 +959,14 @@ export default function App() {
                   className="!text-lg !font-black !text-brand"
                 />
                 <div className="text-right shrink-0">
-                  <p className="text-[10px] font-bold text-ink-soft uppercase">Ví dụ</p>
+                  <p className="text-2xs font-bold text-ink-soft uppercase">Ví dụ</p>
                   <p className="text-sm font-black text-ink">
                     100k → {(100000 * markup / 1000).toLocaleString('vi-VN')}k
                   </p>
                 </div>
               </div>
             </Field>
-            <p className="text-[11px] text-ink-soft font-medium mt-2.5 leading-relaxed">
+            <p className="text-xs text-ink-soft font-medium mt-2.5 leading-relaxed">
               Trước đây con số này nằm cứng trong code, muốn đổi giá phải sửa code rồi deploy lại.
               Giờ đổi ở đây là áp dụng ngay.
             </p>
@@ -998,7 +988,7 @@ export default function App() {
           </div>
 
           <div className="bg-surface-2 border border-line rounded-2xl p-4 space-y-2">
-            <p className="text-[11px] font-black uppercase tracking-wider text-ink-soft">Bản báo giá hiện tại</p>
+            <p className="text-xs font-black uppercase tracking-wider text-ink-soft">Bản báo giá hiện tại</p>
             <Row label="Tiền nhựa" value={formatCurrency(results.materialCost)} />
             <Row label="Tiền điện" value={formatCurrency(results.electricityCost)} />
             <Row label="Khấu hao máy" value={formatCurrency(results.depreciationCost)} />
@@ -1013,7 +1003,6 @@ export default function App() {
       <AnimatePresence>
         {showShowroom && (
           <motion.div
-            data-themed
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1021,12 +1010,12 @@ export default function App() {
             className="fixed inset-0 z-50 bg-app flex flex-col"
           >
             <header className="shrink-0 bg-surface border-b border-line px-4 sm:px-6 py-3 flex items-center gap-4">
-              <Button variant="ghost" onClick={() => setShowShowroom(false)} className="!p-2 rounded-full" aria-label="Quay lại">
+              <Button variant="ghost" onClick={() => setShowShowroom(false)} className="!p-2.5 rounded-full" aria-label="Quay lại">
                 <ArrowLeft size={20} />
               </Button>
               <div className="min-w-0">
                 <h1 className="text-base sm:text-lg font-black tracking-tight truncate">Bộ sưu tập màu sắc</h1>
-                <p className="text-[10px] font-bold text-ink-soft uppercase tracking-[0.14em]">Danh mục nhựa tại kho</p>
+                <p className="text-2xs font-bold text-ink-soft uppercase tracking-[0.14em]">Danh mục nhựa tại kho</p>
               </div>
             </header>
 
@@ -1053,7 +1042,7 @@ export default function App() {
                     <div className="h-1.5 w-16 bg-brand rounded-full mt-2" />
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] font-black text-ink-soft uppercase tracking-[0.16em]">Tổng số</p>
+                    <p className="text-2xs font-black text-ink-soft uppercase tracking-[0.16em]">Tổng số</p>
                     <p className="text-2xl font-black text-brand">
                       {materials.filter(m => (m.category || 'PLA') === showroomCategory).length} mẫu
                     </p>
@@ -1066,8 +1055,7 @@ export default function App() {
                       key={m.id}
                       initial={{ opacity: 0, y: 24, scale: 0.96 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ ...springSoft, delay: Math.min(i * 0.035, 0.4) }}
-                      whileHover={{ y: -6 }}
+                      transition={{ ...springSoft, delay: Math.min(i * 0.02, 0.18) }}
                       className="bg-surface rounded-3xl p-3 border border-line shadow-card group"
                     >
                       <div className="aspect-square bg-surface-2 rounded-2xl overflow-hidden border border-line relative">
@@ -1082,7 +1070,7 @@ export default function App() {
                         )}
                         {m.inStock === false && (
                           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <span className="bg-danger text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.14em]">
+                            <span className="bg-danger text-white text-2xs font-black px-3 py-1 rounded-full uppercase tracking-[0.14em]">
                               Hết hàng
                             </span>
                           </div>
@@ -1091,7 +1079,7 @@ export default function App() {
                           style={{ backgroundColor: m.colorHex }} />
                       </div>
                       <div className="px-1.5 pt-3 pb-1">
-                        <p className="text-[10px] font-black text-brand uppercase tracking-[0.14em] truncate">{m.brand}</p>
+                        <p className="text-2xs font-black text-brand uppercase tracking-[0.14em] truncate">{m.brand}</p>
                         <h3 className="text-base font-black tracking-tight truncate">{m.category} {m.brand}</h3>
                         <p className="text-sm font-bold text-ink-soft truncate">{m.color}</p>
                       </div>
@@ -1109,7 +1097,7 @@ export default function App() {
       </AnimatePresence>
 
       <footer className="hidden md:block py-4 text-center border-t border-line">
-        <p className="text-[10px] text-ink-faint font-bold uppercase tracking-[0.4em]">
+        <p className="text-2xs text-ink-faint font-bold uppercase tracking-[0.4em]">
           NSHOPVN • PREMIUM 3D PRINTING
         </p>
       </footer>
@@ -1154,9 +1142,9 @@ function MaterialPill({ m, active, onClick }: { m: Material; active: boolean; on
         <p className="text-xs font-bold truncate">{m.category} {m.brand}</p>
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full shrink-0 border border-black/10" style={{ backgroundColor: m.colorHex }} />
-          <p className="text-[10px] font-semibold text-ink-soft truncate">{m.color || '---'}</p>
+          <p className="text-2xs font-semibold text-ink-soft truncate">{m.color || '---'}</p>
         </div>
-        <p className="text-[11px] font-black text-brand">{formatCurrency(m.pricePerKg)}</p>
+        <p className="text-xs font-black text-brand">{formatCurrency(m.pricePerKg)}</p>
       </div>
       {active && (
         <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={spring}
@@ -1181,8 +1169,7 @@ function MaterialCard({
 }) {
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.94 }}
+      initial={{ opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.92 }}
       transition={springSoft}
@@ -1221,10 +1208,10 @@ function MaterialCard({
               transition={{ duration: 0.15 }}
               className="absolute inset-0 z-20 bg-[#1c1c1e]/92 flex flex-col items-center justify-center gap-1.5 px-3 text-center"
             >
-              <p className="text-[11px] font-black text-white uppercase tracking-wide leading-tight">
+              <p className="text-xs font-black text-white uppercase tracking-wide leading-tight">
                 Xoá {m.category || 'PLA'} {m.brand}?
               </p>
-              <p className="text-[9px] font-bold text-white/50">Không hoàn tác được</p>
+              <p className="text-2xs font-bold text-white/50">Không hoàn tác được</p>
               <div className="flex gap-2 mt-1">
                 <Button variant="danger" size="sm" onClick={onDelete}>Xoá</Button>
                 <Button size="sm" onClick={onCancelDelete} className="!bg-white/15 !text-white !border-white/20">Huỷ</Button>
@@ -1258,7 +1245,7 @@ function MaterialCard({
             <NumberInput defaultValue={m.pricePerKg} onBlur={e => onUpdate({ pricePerKg: Number(e.target.value) })} className="!py-2 !text-sm !font-black !text-brand" />
           </Field>
           <div className="shrink-0 pb-1">
-            <p className="text-[11px] font-bold text-ink-soft mb-1.5 text-center">Còn</p>
+            <p className="text-xs font-bold text-ink-soft mb-1.5 text-center">Còn</p>
             <Switch checked={m.inStock ?? true} onChange={v => onUpdate({ inStock: v })} label="Còn hàng" />
           </div>
         </div>
