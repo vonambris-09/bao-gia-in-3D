@@ -69,7 +69,7 @@ export function Field({
 }
 
 /* Chỉ transition box-shadow khi focus — một phần tử tại một thời điểm, không đáng kể. */
-const controlBase =
+export const controlBase =
   'w-full bg-surface-2 border border-line rounded-xl px-4 py-3 text-sm font-semibold text-ink ' +
   'outline-none focus:border-brand focus:shadow-[0_0_0_4px_var(--ring)] ' +
   'disabled:opacity-50 placeholder:text-ink-faint';
@@ -217,10 +217,12 @@ export function Switch({
    ========================================================================== */
 
 export function Sheet({
-  open, onClose, title, children, footer,
+  open, onClose, title, children, footer, toolbar,
 }: {
   open: boolean; onClose: () => void; title: string;
   children: ReactNode; footer?: ReactNode;
+  /** Dải cố định ngay dưới tiêu đề (ô tìm kiếm, bộ lọc…) — không cuộn theo nội dung. */
+  toolbar?: ReactNode;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -270,6 +272,8 @@ export function Sheet({
                 <X size={18} />
               </Button>
             </div>
+
+            {toolbar && <div className="px-6 pt-4 pb-1 shrink-0">{toolbar}</div>}
 
             <div className="overflow-y-auto px-6 py-5 flex-1">{children}</div>
 

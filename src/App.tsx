@@ -17,11 +17,12 @@ import {
 } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency, normalizeVi } from '@/lib/utils';
 import { auth, db, signIn, logOut, handleFirestoreError } from '@/lib/firebase';
 import { useTheme } from '@/lib/theme';
 import { Material, SystemSettings, QuoteParams, CalculationResult, DEFAULT_MARKUP } from './types';
 import { QuoteSheet } from './components/QuoteSheet';
+import { MaterialPicker } from './components/MaterialPicker';
 import {
   Card, Field, TextInput, NumberInput, Select, Button, Segmented,
   Switch, Sheet, Empty, spring, springSoft,
@@ -456,11 +457,10 @@ export default function App() {
   };
 
   const filteredMaterials = useMemo(() => materials.filter(m => {
-    const q = inventorySearch.toLowerCase();
+    // Bỏ dấu hai bên: gõ "trang" vẫn ra "Trắng".
+    const q = normalizeVi(inventorySearch.trim());
     const searchMatch = !q ||
-      m.brand?.toLowerCase().includes(q) ||
-      m.color?.toLowerCase().includes(q) ||
-      m.category?.toLowerCase().includes(q);
+      normalizeVi(`${m.brand} ${m.color} ${m.category}`).includes(q);
     const stockMatch = inventoryStockFilter === 'all' ||
       (inventoryStockFilter === 'in' && m.inStock !== false) ||
       (inventoryStockFilter === 'out' && m.inStock === false);
@@ -625,17 +625,12 @@ export default function App() {
                       </div>
 
                       <Field label="Cuộn nhựa trong kho" hint={`${categoryMaterials.length} loại`}>
-                        <Select
+                        <MaterialPicker
+                          materials={categoryMaterials}
                           value={params.materialId}
-                          onChange={e => setParams({ ...params, materialId: e.target.value })}
-                        >
-                          {categoryMaterials.map(m => (
-                            <option key={m.id} value={m.id} disabled={m.inStock === false}>
-                              {m.brand} — {m.color}{m.inStock === false ? ' (HẾT HÀNG)' : ''}
-                            </option>
-                          ))}
-                          {categoryMaterials.length === 0 && <option value="">(Trống)</option>}
-                        </Select>
+                          category={quoteCategory}
+                          onChange={id => setParams(p => ({ ...p, materialId: id }))}
+                        />
                       </Field>
                     </div>
                   </Card>
