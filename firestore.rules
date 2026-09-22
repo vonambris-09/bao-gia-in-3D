@@ -79,9 +79,18 @@ service cloud.firestore {
     // ------------------------------------------------------------------
     match /materials/{materialId} {
 
-      // #1 authRequired, #8 piiLeak, #9 queryScraping
-      // (client luôn query kèm `where('ownerId','==',uid)` nên list cũng khớp)
-      allow read: if isAdmin() && ownsExisting();
+      // ĐỌC CÔNG KHAI — có chủ đích.
+      // Showroom (vonambris-09.github.io/showroom-filament) dùng chung database
+      // này và đọc kho nhựa KHÔNG đăng nhập. Bản rules trước chỉ cho admin đọc
+      // (spec #1/#8/#9) và làm showroom đứng ở "Đang đồng bộ showroom...".
+      //
+      // Đánh đổi đã chấp nhận: mọi field của document (kể cả pricePerKg = giá
+      // vốn, và ownerId) đều xem được qua dữ liệu tải về. Rules không che được
+      // từng field. Nếu muốn giấu giá vốn: tách collection công khai riêng chỉ
+      // chứa field hiển thị, và cho showroom đọc collection đó.
+      //
+      // GHI/XOÁ vẫn chỉ admin (bên dưới). Settings vẫn khoá hoàn toàn.
+      allow read: if true;
 
       // #10 unauthorizedDeletion
       allow delete: if isAdmin() && ownsExisting();
@@ -116,6 +125,19 @@ service cloud.firestore {
                    && request.auth.uid == userId
                    && request.resource.data.ownerId == request.auth.uid
                    && isValidSettings(request.resource.data);
+    }
+
+    // ------------------------------------------------------------------
+    // /vat-lieu — collection RỖNG, chỉ để showroom không bị lỗi.
+    //
+    // Showroom có hàm "chẩn đoán" dò song song cả 'materials' lẫn 'vat-lieu'.
+    // Nếu 'vat-lieu' bị từ chối và lỗi về SAU kết quả 'materials', nó ghi đè
+    // trạng thái thành 'error' rồi thay dữ liệu thật bằng dữ liệu mẫu.
+    // Không client nào ghi được vào đây (catch-all bên dưới chặn ghi), nên mở
+    // đọc không lộ gì — chỉ trả về danh sách rỗng như trước.
+    // ------------------------------------------------------------------
+    match /vat-lieu/{docId} {
+      allow read: if true;
     }
 
     // ------------------------------------------------------------------

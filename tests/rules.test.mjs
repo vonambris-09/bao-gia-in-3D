@@ -127,8 +127,25 @@ describe('P0.1 · Cổng đăng nhập theo allowlist', () => {
     ));
   });
 
-  test('chưa đăng nhập thì không đọc được gì', async () => {
-    await assertFails(getDoc(doc(unauthDb, 'materials', 'mat-1')));
+  // Kho nhựa mở đọc công khai có chủ đích — showroom đọc không đăng nhập.
+  test('chưa đăng nhập: ĐỌC được kho nhựa (showroom cần)', async () => {
+    await assertSucceeds(getDoc(doc(unauthDb, 'materials', 'mat-1')));
+    await assertSucceeds(getDocs(collection(unauthDb, 'materials')));
+  });
+
+  test('chưa đăng nhập: KHÔNG đọc được settings (công thức giá)', async () => {
+    await assertFails(getDoc(doc(unauthDb, 'settings', ADMIN_UID)));
+  });
+
+  test('chưa đăng nhập: KHÔNG ghi / xoá được kho nhựa', async () => {
+    await assertFails(setDoc(doc(unauthDb, 'materials', 'mat-1'), { pricePerKg: 1 }, { merge: true }));
+    await assertFails(deleteDoc(doc(unauthDb, 'materials', 'mat-1')));
+  });
+
+  test('showroom dò "vat-lieu": đọc được (rỗng), không ghi được', async () => {
+    await assertSucceeds(getDocs(collection(unauthDb, 'vat-lieu')));
+    await assertFails(setDoc(doc(unauthDb, 'vat-lieu', 'x'), { a: 1 }));
+    await assertFails(setDoc(doc(adminDb, 'vat-lieu', 'x'), { a: 1 }));
   });
 
   test('/test/connection không còn mở công khai', async () => {
@@ -197,12 +214,15 @@ describe('security_spec · 12 payload', () => {
     ));
   });
 
-  test('#8 piiLeak — người lạ đọc vật liệu của admin', async () => {
-    await assertFails(getDoc(doc(strangerDb, 'materials', 'mat-1')));
+  // #8 và #9 trong spec gốc yêu cầu CHẶN đọc kho nhựa. Đã đổi có chủ đích:
+  // showroom công khai cần đọc toàn bộ kho. Phần cần giữ kín là settings.
+  test('#8 piiLeak (đã đổi) — người lạ đọc được kho nhựa, KHÔNG đọc được settings', async () => {
+    await assertSucceeds(getDoc(doc(strangerDb, 'materials', 'mat-1')));
+    await assertFails(getDoc(doc(strangerDb, 'settings', ADMIN_UID)));
   });
 
-  test('#9 queryScraping — liệt kê toàn bộ materials không lọc ownerId', async () => {
-    await assertFails(getDocs(collection(adminDb, 'materials')));
+  test('#9 queryScraping (đã đổi) — liệt kê toàn bộ kho nhựa không lọc ownerId', async () => {
+    await assertSucceeds(getDocs(collection(adminDb, 'materials')));
   });
 
   test('#10 unauthorizedDeletion — người lạ xoá vật liệu của admin', async () => {
