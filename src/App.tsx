@@ -20,6 +20,8 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { cn, formatCurrency, normalizeVi } from '@/lib/utils';
 import { auth, db, signIn, logOut, handleFirestoreError } from '@/lib/firebase';
 import { useTheme } from '@/lib/theme';
+import { MayIn, MAY_MAU, HANG_MAY, idMayMoi } from '@/lib/may-in';
+import { ThongTinShop, docShop, luuShop, NGAN_HANG, tenNganHang } from '@/lib/cua-hang';
 import { Material, SystemSettings, QuoteParams, CalculationResult, DEFAULT_MARKUP } from './types';
 import { QuoteSheet } from './components/QuoteSheet';
 import { MaterialPicker } from './components/MaterialPicker';
@@ -33,8 +35,6 @@ import {
    ========================================================================== */
 
 const CATEGORIES = ['PLA', 'PETG', 'PETG-CF', 'ABS', 'ASA', 'TPU'] as const;
-
-const BANK = { name: 'NGÂN HÀNG OCB', holder: 'VO THANH NAM', number: '0344970774', bin: '970448' };
 
 const generateShortId = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -94,6 +94,33 @@ const ColorPicker = ({ defaultColor, onBlur }: { defaultColor: string; onBlur: (
 };
 
 /* ==========================================================================
+   Cài đặt: máy in
+   ========================================================================== */
+
+// Luôn có ít nhất một máy; máy đang chọn quyết định công suất + khấu hao. Dữ liệu cũ (một máy
+// chung) thành "Máy in của tôi" với đúng số cũ nên báo giá không đổi.
+function chuanHoaCaiDat(s: SystemSettings): SystemSettings {
+  const o: SystemSettings = { ...s };
+  if (o.markupMultiplier == null && o.heSoGia) o.markupMultiplier = o.heSoGia;
+  delete o.heSoGia;
+  if (!Array.isArray(o.mayIn) || !o.mayIn.length) {
+    o.mayIn = [{ id: 'may-1', ten: 'Máy in của tôi', congSuat: o.machinePowerW || 200, khauHao: o.depreciationPerHour ?? 4000 }];
+  }
+  const may = o.mayIn.find(m => m.id === o.mayChon) || o.mayIn[0];
+  o.mayChon = may.id;
+  o.machinePowerW = Math.max(1, may.congSuat || 0);
+  o.depreciationPerHour = Math.max(0, may.khauHao || 0);
+  return o;
+}
+// Firestore chỉ nhận các khoá này (isValidSettings trong firestore.rules); máy in ở trong trình duyệt.
+const KHOA_LEN_MAY = ['machinePowerW', 'electricityPriceKwh', 'depreciationPerHour', 'serviceNotes', 'markupMultiplier'] as const;
+const phanLenMay = (s: SystemSettings, ownerId: string) => {
+  const o: Record<string, unknown> = { ownerId };
+  for (const k of KHOA_LEN_MAY) if (s[k] !== undefined) o[k] = s[k];
+  return o;
+};
+
+/* ==========================================================================
    Ứng dụng
    ========================================================================== */
 
@@ -116,14 +143,18 @@ export default function App() {
 
   const [systemSettings, setSystemSettings] = useState<SystemSettings>(() => {
     const local = localStorage.getItem('local_settings');
-    return local ? JSON.parse(local) : {
+    return chuanHoaCaiDat(local ? JSON.parse(local) : {
       machinePowerW: 200,
       electricityPriceKwh: 5000,
       depreciationPerHour: 4000,
       markupMultiplier: DEFAULT_MARKUP,
       serviceNotes: DEFAULT_SERVICE_NOTES,
-    };
+    });
   });
+  const [shop, setShop] = useState<ThongTinShop>(docShop);
+  const doiShop = (p: Partial<ThongTinShop>) => setShop(cu => { const moi = { ...cu, ...p }; luuShop(moi); return moi; });
+  const [binTuGo, setBinTuGo] = useState(() => { const b = docShop().bin; return !!b && !NGAN_HANG.some(n => n[0] === b); });
+  const [mayThem, setMayThem] = useState('');
 
   const [materials, setMaterials] = useState<Material[]>(() => {
     const local = localStorage.getItem('local_materials');
@@ -167,12 +198,12 @@ export default function App() {
   useEffect(() => {
     if (!user?.uid) return;
     return onSnapshot(doc(db, 'settings', user.uid), snapshot => {
-      let finalData = snapshot.exists() ? (snapshot.data() as SystemSettings) : null;
-      if (localStorage.getItem('pending_sync') === 'true') {
-        const localStr = localStorage.getItem('local_settings');
-        if (localStr) finalData = JSON.parse(localStr);
-      }
+      const localStr = localStorage.getItem('local_settings');
+      const ganDay: SystemSettings | null = localStr ? JSON.parse(localStr) : null;
+      let finalData = snapshot.exists() ? ({ ...(ganDay || {}), ...snapshot.data() } as SystemSettings) : null;
+      if (localStorage.getItem('pending_sync') === 'true' && ganDay) finalData = ganDay;
       if (finalData) {
+        finalData = chuanHoaCaiDat(finalData);
         setSystemSettings(finalData);
         localStorage.setItem('local_settings', JSON.stringify(finalData));
       }
@@ -273,7 +304,7 @@ export default function App() {
         );
       });
 
-      const settingsPromise = setDoc(doc(db, 'settings', user.uid), { ...systemSettings, ownerId: user.uid });
+      const settingsPromise = setDoc(doc(db, 'settings', user.uid), phanLenMay(systemSettings, user.uid));
 
       await Promise.all([...deletePromises, ...writePromises, settingsPromise]);
 
@@ -289,18 +320,21 @@ export default function App() {
   };
 
   const saveSettings = async (newSettings: SystemSettings) => {
+    const s = chuanHoaCaiDat(newSettings);
+    setSystemSettings(s);
+    localStorage.setItem('local_settings', JSON.stringify(s));
     if (!user) return;
-    setSystemSettings(newSettings);
-    localStorage.setItem('local_settings', JSON.stringify(newSettings));
     try {
-      await safeCloudWrite(setDoc(doc(db, 'settings', user.uid), { ...newSettings, ownerId: user.uid }));
+      await safeCloudWrite(setDoc(doc(db, 'settings', user.uid), phanLenMay(s, user.uid)));
     } catch (e) {
       reportWriteError(e, 'lưu cài đặt');
     }
   };
 
   const patchSettings = (patch: Partial<SystemSettings>) =>
-    setSystemSettings(s => ({ ...s, ...patch }));
+    setSystemSettings(s => chuanHoaCaiDat({ ...s, ...patch }));
+  const doiMay = (id: string, sua: Partial<MayIn>) =>
+    patchSettings({ mayIn: (systemSettings.mayIn || []).map(m => (m.id === id ? { ...m, ...sua } : m)) });
 
   /* ------------------------------------------------------------ Tính giá */
   const selectedMaterial = materials.find(m => m.id === params.materialId);
@@ -321,7 +355,7 @@ export default function App() {
     return { materialCost, electricityCost, depreciationCost, internalTotal, customerTotal };
   }, [params, systemSettings, selectedMaterial, markup]);
 
-  const qrUrl = `https://qr.limcorp.vn/qrcode.png?bank=${BANK.bin}&number=${BANK.number}&amount=${results.customerTotal}&content=${encodeURIComponent(params.note)}`;
+  const qrUrl = `https://qr.limcorp.vn/qrcode.png?bank=${shop.bin}&number=${shop.stk}&amount=${results.customerTotal}&content=${encodeURIComponent(params.note)}`;
   const qrLoading = loadedQrUrl !== qrUrl;
 
   /* ------------------------------------------------------------- Xuất file */
@@ -637,6 +671,11 @@ export default function App() {
 
                   <Card title="Thông số bản in" icon={<Box size={13} />}>
                     <div className="space-y-3.5">
+                      <Field label="Máy in" hint={`${systemSettings.machinePowerW} W`}>
+                        <Select value={systemSettings.mayChon} onChange={e => saveSettings({ ...systemSettings, mayChon: e.target.value })}>
+                          {(systemSettings.mayIn || []).map(m => <option key={m.id} value={m.id}>{m.ten}</option>)}
+                        </Select>
+                      </Field>
                       <div className="grid grid-cols-2 gap-3">
                         <Field label="Giờ in">
                           <NumberInput value={params.hours} onChange={e => setParams({ ...params, hours: Number(e.target.value) })} />
@@ -762,7 +801,8 @@ export default function App() {
                     qrUrl={qrUrl}
                     qrLoading={qrLoading}
                     onQrLoad={() => setLoadedQrUrl(qrUrl)}
-                    bank={BANK}
+                    bank={{ name: shop.bin ? 'NGÂN HÀNG ' + tenNganHang(shop.bin).toUpperCase() : '', holder: shop.chuTk, number: shop.stk }}
+                    tenCuaHang={shop.ten}
                   />
                 </div>
 
@@ -934,11 +974,11 @@ export default function App() {
       {/* ---------------------------------------------------------- Cài đặt */}
       <Sheet
         open={showSettings}
-        onClose={() => { setShowSettings(false); if (user) saveSettings(systemSettings); }}
-        title="Cài đặt tính giá"
+        onClose={() => { setShowSettings(false); saveSettings(systemSettings); }}
+        title="Cài đặt"
         footer={
           <Button variant="brand" size="lg" className="w-full" icon={<Save size={15} />}
-            onClick={() => { setShowSettings(false); if (user) saveSettings(systemSettings); }}>
+            onClick={() => { setShowSettings(false); saveSettings(systemSettings); }}>
             Lưu cài đặt
           </Button>
         }
@@ -961,25 +1001,66 @@ export default function App() {
                 </div>
               </div>
             </Field>
-            <p className="text-xs text-ink-soft font-medium mt-2.5 leading-relaxed">
-              Trước đây con số này nằm cứng trong code, muốn đổi giá phải sửa code rồi deploy lại.
-              Giờ đổi ở đây là áp dụng ngay.
-            </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Field label="Công suất máy (W)">
-              <NumberInput value={systemSettings.machinePowerW}
-                onChange={e => patchSettings({ machinePowerW: Number(e.target.value) })} />
-            </Field>
-            <Field label="Giá điện (đ/kWh)">
-              <NumberInput value={systemSettings.electricityPriceKwh}
-                onChange={e => patchSettings({ electricityPriceKwh: Number(e.target.value) })} />
-            </Field>
-            <Field label="Khấu hao (đ/giờ)">
-              <NumberInput value={systemSettings.depreciationPerHour}
-                onChange={e => patchSettings({ depreciationPerHour: Number(e.target.value) })} />
-            </Field>
+          <Field label="Giá điện (đ/kWh)">
+            <NumberInput value={systemSettings.electricityPriceKwh}
+              onChange={e => patchSettings({ electricityPriceKwh: Number(e.target.value) })} />
+          </Field>
+
+          <div className="space-y-2">
+            <p className="text-xs font-black uppercase tracking-wider text-ink-soft">Máy in</p>
+            <div className="grid grid-cols-[minmax(0,1fr)_86px_104px_36px] gap-2 px-1 text-2xs font-bold uppercase text-ink-faint">
+              <span>Tên máy</span><span className="text-right">W</span><span className="text-right">Khấu hao/giờ</span><span />
+            </div>
+            {(systemSettings.mayIn || []).map(m => (
+              <div key={m.id} className="grid grid-cols-[minmax(0,1fr)_86px_104px_36px] gap-2 items-center">
+                <TextInput value={m.ten} placeholder="Tên máy" onChange={e => doiMay(m.id, { ten: e.target.value })} className="!py-2 !text-sm" />
+                <NumberInput value={m.congSuat} min="1" step="5" onChange={e => doiMay(m.id, { congSuat: Math.max(1, Number(e.target.value)) })} className="!py-2 !text-sm text-right" />
+                <NumberInput value={m.khauHao} min="0" step="500" onChange={e => doiMay(m.id, { khauHao: Math.max(0, Number(e.target.value)) })} className="!py-2 !text-sm text-right" />
+                <Button variant="ghost" size="sm" className="!p-2" aria-label="Xoá máy" disabled={(systemSettings.mayIn || []).length < 2}
+                  onClick={() => patchSettings({ mayIn: (systemSettings.mayIn || []).filter(x => x.id !== m.id) })}>
+                  <Trash2 size={15} />
+                </Button>
+              </div>
+            ))}
+            <Select
+              value={mayThem}
+              onChange={e => {
+                const v = e.target.value;
+                setMayThem('');
+                if (!v) return;
+                const mau = MAY_MAU.find(x => x.ten === v);
+                const moi: MayIn = { id: idMayMoi(), ten: mau ? mau.ten : 'Máy mới', congSuat: mau ? mau.congSuat : 150, khauHao: systemSettings.depreciationPerHour };
+                patchSettings({ mayIn: [...(systemSettings.mayIn || []), moi] });
+              }}
+            >
+              <option value="">+ Thêm máy…</option>
+              {HANG_MAY.map(h => (
+                <optgroup key={h} label={h}>
+                  {MAY_MAU.filter(x => x.hang === h).map(x => <option key={x.ten} value={x.ten}>{x.ten} · {x.congSuat} W</option>)}
+                </optgroup>
+              ))}
+              <option value="__khac">Máy khác (tự nhập)</option>
+            </Select>
+            <p className="text-xs text-ink-soft font-medium px-1">Công suất là mức trung bình lúc in, dùng để tính tiền điện.</p>
+          </div>
+
+          <div className="space-y-2.5">
+            <p className="text-xs font-black uppercase tracking-wider text-ink-soft">Cửa hàng &amp; chuyển khoản</p>
+            <TextInput value={shop.ten} placeholder="Tên cửa hàng (in trên báo giá)" onChange={e => doiShop({ ten: e.target.value })} />
+            <Select value={binTuGo ? 'khac' : shop.bin}
+              onChange={e => { const v = e.target.value; setBinTuGo(v === 'khac'); doiShop({ bin: v === 'khac' ? '' : v }); }}>
+              <option value="">Chọn ngân hàng…</option>
+              {NGAN_HANG.map(([b, t]) => <option key={b} value={b}>{t}</option>)}
+              <option value="khac">Khác (tự gõ mã BIN)</option>
+            </Select>
+            {binTuGo && (
+              <TextInput value={shop.bin} inputMode="numeric" placeholder="Mã BIN ngân hàng (6 số)"
+                onChange={e => doiShop({ bin: e.target.value.replace(/\D/g, '').slice(0, 6) })} />
+            )}
+            <TextInput value={shop.stk} inputMode="numeric" placeholder="Số tài khoản" onChange={e => doiShop({ stk: e.target.value.replace(/\s/g, '') })} />
+            <TextInput value={shop.chuTk} placeholder="Tên chủ tài khoản" onChange={e => doiShop({ chuTk: e.target.value.toUpperCase() })} />
           </div>
 
           <div className="bg-surface-2 border border-line rounded-2xl p-4 space-y-2">

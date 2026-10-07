@@ -13,13 +13,18 @@ export interface Material {
   updatedAt?: any;
 }
 
+import type { MayIn } from './lib/may-in';
+
 export interface SystemSettings {
-  machinePowerW: number;
+  machinePowerW: number;       // = công suất máy đang chọn (giữ cho luật Firestore)
   electricityPriceKwh: number;
-  depreciationPerHour: number;
+  depreciationPerHour: number; // = khấu hao máy đang chọn
   /** Hệ số nhân từ giá vốn ra giá bán. Trước đây bị hard-code 2.25 trong code. */
   markupMultiplier?: number;
   serviceNotes?: string;
+  heSoGia?: number;            // tên cũ của markupMultiplier ở bản offline 1.0.11, chỉ đọc để chuyển
+  mayIn?: MayIn[];             // máy in của tiệm — chỉ lưu trong trình duyệt
+  mayChon?: string;            // id máy đang chọn
 }
 
 /** Dùng khi settings chưa tải xong hoặc thiếu field (dữ liệu cũ). */

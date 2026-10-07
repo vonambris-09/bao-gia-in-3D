@@ -36,10 +36,14 @@ interface Props {
   qrLoading: boolean;
   onQrLoad: () => void;
   bank: { name: string; holder: string; number: string };
+  tenCuaHang?: string;
 }
 
+// Bản offline (gói khách) không mang tên cửa hàng của chủ app.
+const TEN_MAC_DINH = import.meta.env.MODE === 'offline' ? 'BÁO GIÁ IN 3D' : 'NSHOP DIGITAL FABRICATION';
+
 export const QuoteSheet = forwardRef<HTMLDivElement, Props>(function QuoteSheet(
-  { params, material, results, category, characteristics, serviceNotes, qrUrl, qrLoading, onQrLoad, bank },
+  { params, material, results, category, characteristics, serviceNotes, qrUrl, qrLoading, onQrLoad, bank, tenCuaHang },
   ref
 ) {
   return (
@@ -54,7 +58,7 @@ export const QuoteSheet = forwardRef<HTMLDivElement, Props>(function QuoteSheet(
         style={{ borderBottom: `1px solid ${C.line}`, background: C.bg2 }}
       >
         <p className="text-[12px] font-black uppercase tracking-[0.28em] mb-1" style={{ color: C.sub }}>
-          NSHOP DIGITAL FABRICATION
+          {tenCuaHang || TEN_MAC_DINH}
         </p>
         <h1 className="text-lg sm:text-xl font-extrabold tracking-tight" style={{ color: C.ink }}>
           Xác Nhận Báo Giá
