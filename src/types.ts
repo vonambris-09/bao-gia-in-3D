@@ -11,6 +11,14 @@ export interface Material {
   ownerId: string;
   createdAt?: any;
   updatedAt?: any;
+  /**
+   * Do app Kho nhựa (máy tính ở tiệm) tự ghi lên: tổng số gram còn của các cuộn đang gắn với vật liệu này,
+   * số cuộn còn nhựa, và lúc số đó đổi lần cuối. Không có = vật liệu chưa gắn cuộn nào trong kho.
+   * Kho cũng tự bật / tắt inStock theo số này (tắt được trong app Kho nhựa).
+   */
+  khoGram?: number;
+  khoSoCuon?: number;
+  khoCapNhat?: any;
 }
 
 import type { MayIn } from './lib/may-in';

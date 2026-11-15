@@ -20,6 +20,13 @@ export function normalizeVi(s?: string) {
 /** So sánh chuỗi theo đúng thứ tự bảng chữ cái tiếng Việt. */
 export const viCollator = new Intl.Collator('vi', { sensitivity: 'base', numeric: true });
 
+/** Số nhựa còn trong kho (app Kho nhựa ở tiệm tự ghi lên): "850 g", "2,3 kg". */
+export function formatGram(g: number) {
+  return g >= 1000
+    ? `${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(g / 1000)} kg`
+    : `${Math.round(g)} g`;
+}
+
 export function formatCurrency(value: number) {
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',

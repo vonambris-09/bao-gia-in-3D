@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, PackageX, Search } from 'lucide-react';
 
-import { cn, normalizeVi, viCollator } from '@/lib/utils';
+import { cn, formatGram, normalizeVi, viCollator } from '@/lib/utils';
 import type { Material } from '../types';
 import { Sheet, controlBase } from './ui';
 
@@ -35,6 +35,16 @@ function Dot({ hex, out, size = 22 }: { hex?: string; out?: boolean; size?: numb
 
 function label(m: Material) {
   return `${m.brand || 'Không tên'} — ${m.color || 'Không rõ màu'}`;
+}
+
+/** Số nhựa còn trong kho (app Kho nhựa ghi lên). Vật liệu chưa gắn cuộn nào thì không hiện gì. */
+function Kho({ m }: { m: Material }) {
+  if (typeof m.khoGram !== 'number') return null;
+  return (
+    <span className={cn('text-xs font-bold shrink-0 tabular-nums', m.khoGram < 150 ? 'text-warn' : 'text-ink-faint')}>
+      {formatGram(m.khoGram)}
+    </span>
+  );
 }
 
 export function MaterialPicker({
@@ -107,6 +117,7 @@ export function MaterialPicker({
         <span className={cn('flex-1 min-w-0 truncate', !selected && 'text-ink-faint')}>
           {selected ? label(selected) : '(Trống)'}
         </span>
+        {selected && <Kho m={selected} />}
         <ChevronDown size={16} className="text-ink-faint shrink-0" />
       </button>
 
@@ -159,6 +170,7 @@ export function MaterialPicker({
                       <span className={cn('flex-1 min-w-0 truncate text-sm font-bold', active ? 'text-brand' : 'text-ink')}>
                         {m.color || 'Không rõ màu'}
                       </span>
+                      <Kho m={m} />
                       {active && <Check size={17} className="text-brand shrink-0" />}
                     </button>
                   );

@@ -17,7 +17,7 @@ import {
 } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
-import { cn, formatCurrency, normalizeVi } from '@/lib/utils';
+import { cn, formatCurrency, formatGram, normalizeVi } from '@/lib/utils';
 import { auth, db, signIn, logOut, handleFirestoreError } from '@/lib/firebase';
 import { useTheme } from '@/lib/theme';
 import { MayIn, MAY_MAU, HANG_MAY, idMayMoi } from '@/lib/may-in';
@@ -666,6 +666,9 @@ export default function App() {
                           onChange={id => setParams(p => ({ ...p, materialId: id }))}
                         />
                       </Field>
+                      {selectedMaterial && typeof selectedMaterial.khoGram === 'number' && (
+                        <KhoDu m={selectedMaterial} canG={params.weightG} />
+                      )}
                     </div>
                   </Card>
 
@@ -1196,6 +1199,31 @@ function Row({ label, value, strong, brand }: { label: string; value: string; st
   );
 }
 
+/** Kho còn đủ nhựa cho bản đang báo giá không (số do app Kho nhựa ở tiệm ghi lên). */
+function KhoDu({ m, canG }: { m: Material; canG: number }) {
+  const con = m.khoGram ?? 0;
+  const du = con >= canG;
+  return (
+    <motion.div
+      key={du ? 'du' : 'thieu'}
+      initial={{ opacity: 0, y: -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={springSoft}
+      className={cn(
+        'flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold',
+        du ? 'bg-ok/10 text-ok' : 'bg-danger/10 text-danger'
+      )}
+    >
+      <Package size={14} className="shrink-0" />
+      <span className="flex-1 min-w-0">
+        {du
+          ? `Kho còn ${formatGram(con)}${m.khoSoCuon ? ` · ${m.khoSoCuon} cuộn` : ''}${canG > 0 ? ` – đủ cho ${formatGram(canG)}` : ''}`
+          : `Kho chỉ còn ${formatGram(con)} – thiếu ${formatGram(canG - con)} cho bản này`}
+      </span>
+    </motion.div>
+  );
+}
+
 function MaterialPill({ m, active, onClick }: { m: Material; active: boolean; onClick: () => void }) {
   const out = m.inStock === false;
   return (
@@ -1325,6 +1353,18 @@ function MaterialCard({
             <Switch checked={m.inStock ?? true} onChange={v => onUpdate({ inStock: v })} label="Còn hàng" />
           </div>
         </div>
+
+        {typeof m.khoGram === 'number' && (
+          <div
+            title="Số do app Kho nhựa ở tiệm tự ghi lên; kho cũng tự bật / tắt Còn hàng"
+            className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-2.5 py-1.5 text-2xs font-bold text-ink-soft"
+          >
+            <span className="flex items-center gap-1.5"><Package size={12} /> Trong kho</span>
+            <span className={cn('tabular-nums', m.inStock === false ? 'text-danger' : 'text-ok')}>
+              {formatGram(m.khoGram)}{m.khoSoCuon ? ` · ${m.khoSoCuon} cuộn` : ''}
+            </span>
+          </div>
+        )}
       </div>
     </motion.div>
   );
