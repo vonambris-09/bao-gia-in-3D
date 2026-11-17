@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
+    "test:vietqr": "tsx --test tests/vietqr.kiem-thu.ts",
     "test:rules": "firebase emulators:exec --only firestore --project demo-baogia-in-3d \"node --test tests/\"",
     "deploy:rules": "firebase deploy --only firestore:rules --project baogiain3d-cua-toi"
   },

@@ -1,5 +1,6 @@
 import { forwardRef } from 'react';
-import { Info, Camera, Sparkles, Loader2 } from 'lucide-react';
+import { Info, Camera, Sparkles } from 'lucide-react';
+import QRCode from 'react-qr-code';
 import { Material, QuoteParams, CalculationResult } from '../types';
 
 /**
@@ -32,9 +33,8 @@ interface Props {
   category: string;
   characteristics: string;
   serviceNotes: string;
-  qrUrl: string;
-  qrLoading: boolean;
-  onQrLoad: () => void;
+  /** Chuỗi VietQR (src/lib/vietqr.ts); rỗng = chưa có số tài khoản, không vẽ QR. */
+  qrValue: string;
   bank: { name: string; holder: string; number: string };
   tenCuaHang?: string;
 }
@@ -43,7 +43,7 @@ interface Props {
 const TEN_MAC_DINH = import.meta.env.MODE === 'offline' ? 'BÁO GIÁ IN 3D' : 'NSHOP DIGITAL FABRICATION';
 
 export const QuoteSheet = forwardRef<HTMLDivElement, Props>(function QuoteSheet(
-  { params, material, results, category, characteristics, serviceNotes, qrUrl, qrLoading, onQrLoad, bank, tenCuaHang },
+  { params, material, results, category, characteristics, serviceNotes, qrValue, bank, tenCuaHang },
   ref
 ) {
   return (
@@ -165,28 +165,14 @@ export const QuoteSheet = forwardRef<HTMLDivElement, Props>(function QuoteSheet(
               className="p-1.5 rounded-2xl overflow-hidden flex items-center justify-center relative shrink-0"
               style={{ width: 118, height: 118, background: C.bg, border: `1px solid ${C.line}` }}
             >
-              {qrLoading && (
-                <div
-                  className="absolute inset-0 flex flex-col items-center justify-center z-10 gap-1.5"
-                  style={{ background: 'rgba(255,255,255,0.92)' }}
-                >
-                  <Loader2 size={17} className="animate-spin" style={{ color: C.brand }} />
-                  <span className="text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: C.brand }}>
-                    Đang tải QR
-                  </span>
-                </div>
+              {/* QR vẽ ngay trong app (SVG), không tải từ dịch vụ ngoài: không chờ, không dính số tiền cũ khi xuất ảnh. */}
+              {qrValue ? (
+                <QRCode value={qrValue} size={106} level="M" bgColor="#ffffff" fgColor="#000000" title="Mã QR chuyển khoản" />
+              ) : (
+                <span className="text-[10px] font-bold text-center leading-tight" style={{ color: C.sub }}>
+                  Chưa có số tài khoản<br />(vào Cài đặt)
+                </span>
               )}
-              <img
-                key={qrUrl}
-                src={qrUrl}
-                alt="Mã QR chuyển khoản"
-                width={106}
-                height={106}
-                className="object-contain transition-opacity duration-300"
-                style={{ opacity: qrLoading ? 0.2 : 1 }}
-                referrerPolicy="no-referrer"
-                onLoad={onQrLoad}
-              />
             </div>
 
             <div className="space-y-3.5 min-w-0">

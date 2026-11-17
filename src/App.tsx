@@ -22,6 +22,7 @@ import { auth, db, signIn, logOut, handleFirestoreError } from '@/lib/firebase';
 import { useTheme } from '@/lib/theme';
 import { MayIn, MAY_MAU, HANG_MAY, idMayMoi } from '@/lib/may-in';
 import { ThongTinShop, docShop, luuShop, NGAN_HANG, tenNganHang } from '@/lib/cua-hang';
+import { chuoiVietQR } from '@/lib/vietqr';
 import { Material, SystemSettings, QuoteParams, CalculationResult, DEFAULT_MARKUP } from './types';
 import { QuoteSheet } from './components/QuoteSheet';
 import { MaterialPicker } from './components/MaterialPicker';
@@ -138,7 +139,6 @@ export default function App() {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [loadedQrUrl, setLoadedQrUrl] = useState('');
   const quoteRef = useRef<HTMLDivElement>(null);
 
   const [systemSettings, setSystemSettings] = useState<SystemSettings>(() => {
@@ -355,17 +355,23 @@ export default function App() {
     return { materialCost, electricityCost, depreciationCost, internalTotal, customerTotal };
   }, [params, systemSettings, selectedMaterial, markup]);
 
-  const qrUrl = `https://qr.limcorp.vn/qrcode.png?bank=${shop.bin}&number=${shop.stk}&amount=${results.customerTotal}&content=${encodeURIComponent(params.note)}`;
-  const qrLoading = loadedQrUrl !== qrUrl;
+  // Mã VietQR dựng ngay trong app (trước đây tải ảnh từ qr.limcorp.vn – dịch vụ đó sập 17-11-2026).
+  const qrValue = useMemo(
+    () => chuoiVietQR({ bin: shop.bin, stk: shop.stk, soTien: results.customerTotal, noiDung: params.note }),
+    [shop.bin, shop.stk, results.customerTotal, params.note],
+  );
 
   /* ------------------------------------------------------------- Xuất file */
   const renderPng = async () => {
     const htmlToImage = await import('html-to-image');
-    return htmlToImage.toPng(quoteRef.current!, { quality: 1, pixelRatio: 2, backgroundColor: '#ffffff' });
+    // includeQueryParams: html-to-image nhớ ảnh đã tải theo địa chỉ BỎ phần sau dấu "?". Hồi QR còn tải từ
+    // qr.limcorp.vn/qrcode.png?...amount=..., chính lỗi này làm ảnh/PDF dính QR số tiền cũ tới khi F5.
+    // QR giờ vẽ tại chỗ, nhưng giữ cờ để ảnh nào khác có "?" trong địa chỉ cũng không bị dùng nhầm bản cũ.
+    return htmlToImage.toPng(quoteRef.current!, { quality: 1, pixelRatio: 2, backgroundColor: '#ffffff', includeQueryParams: true });
   };
 
   const handleExportImage = async () => {
-    if (!quoteRef.current || qrLoading) return;
+    if (!quoteRef.current) return;
     try {
       setIsExporting(true);
       const dataUrl = await renderPng();
@@ -382,7 +388,7 @@ export default function App() {
   };
 
   const handleExportPDF = async () => {
-    if (!quoteRef.current || qrLoading) return;
+    if (!quoteRef.current) return;
     try {
       setIsExporting(true);
       const [{ jsPDF }, dataUrl] = await Promise.all([import('jspdf'), renderPng()]);
@@ -750,7 +756,7 @@ export default function App() {
                       </Button>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="plain" size="sm" onClick={handleExportPDF} disabled={qrLoading || isExporting}
+                      <Button variant="plain" size="sm" onClick={handleExportPDF} disabled={isExporting}
                         icon={isExporting ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}>
                         PDF
                       </Button>
@@ -758,7 +764,7 @@ export default function App() {
                         variant={isCopying ? 'plain' : 'brand'}
                         size="sm"
                         onClick={handleExportImage}
-                        disabled={qrLoading || isExporting}
+                        disabled={isExporting}
                         className={cn(isCopying && '!bg-ok !text-white')}
                         icon={isCopying ? <Check size={13} /> : <Copy size={13} />}
                       >
@@ -801,9 +807,7 @@ export default function App() {
                     category={quoteCategory}
                     characteristics={MATERIAL_CHARACTERISTICS[quoteCategory] || 'Chọn loại nhựa để xem đặc tính.'}
                     serviceNotes={serviceNotes}
-                    qrUrl={qrUrl}
-                    qrLoading={qrLoading}
-                    onQrLoad={() => setLoadedQrUrl(qrUrl)}
+                    qrValue={qrValue}
                     bank={{ name: shop.bin ? 'NGÂN HÀNG ' + tenNganHang(shop.bin).toUpperCase() : '', holder: shop.chuTk, number: shop.stk }}
                     tenCuaHang={shop.ten}
                   />
