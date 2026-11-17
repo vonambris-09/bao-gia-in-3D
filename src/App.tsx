@@ -23,6 +23,8 @@ import { useTheme } from '@/lib/theme';
 import { MayIn, MAY_MAU, HANG_MAY, idMayMoi } from '@/lib/may-in';
 import { ThongTinShop, docShop, luuShop, NGAN_HANG, tenNganHang } from '@/lib/cua-hang';
 import { chuoiVietQR } from '@/lib/vietqr';
+import { NHOM_NHUA, chuanLoai, nhomCua } from '@/lib/loai-nhua';
+import { ChonLoaiNhua } from './components/ChonLoaiNhua';
 import { Material, SystemSettings, QuoteParams, CalculationResult, DEFAULT_MARKUP } from './types';
 import { QuoteSheet } from './components/QuoteSheet';
 import { MaterialPicker } from './components/MaterialPicker';
@@ -35,7 +37,6 @@ import {
    Hằng số
    ========================================================================== */
 
-const CATEGORIES = ['PLA', 'PETG', 'PETG-CF', 'ABS', 'ASA', 'TPU'] as const;
 
 const generateShortId = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -58,6 +59,16 @@ const MATERIAL_CHARACTERISTICS: Record<string, string> = {
   'PETG-CF': 'Nhựa kỹ thuật gia cường sợi Carbon, độ cứng rất tốt. Bề mặt nhám mờ sang trọng, ổn định kích thước cao.',
   'ABS': 'Nhựa kỹ thuật bền bỉ, chịu va đập cực tốt, chịu nhiệt cao tới 90°C. Khó in , dễ cong vênh, dễ gia công hậu kỳ.',
   'TPU': 'Nhựa dẻo đàn hồi như cao su ( tùy mã ). Chống mài mòn, chống va đập và chịu uốn cong hoàn hảo. Khó in, giá thành cao',
+  // Biến thể gia cường sợi: cứng và ổn định kích thước hơn loại thường, bề mặt nhám mờ.
+  'PLA-CF': 'PLA gia cường sợi Carbon: cứng và nhẹ, ít cong vênh, bề mặt nhám mờ sang trọng. Chịu nhiệt tương đương PLA, giòn hơn PLA thường.',
+  'PLA-GF': 'PLA gia cường sợi thủy tinh: cứng vững, ổn định kích thước tốt, bề mặt mờ. Chịu nhiệt tương đương PLA.',
+  'PETG-GF': 'PETG gia cường sợi thủy tinh: cứng và dai, ổn định kích thước cao, bề mặt mờ. Chịu nhiệt tốt hơn PETG thường.',
+  'ABS-CF': 'ABS gia cường sợi Carbon: cứng, nhẹ, ít cong vênh hơn ABS thường, chịu nhiệt cao. Bề mặt nhám mờ, hợp chi tiết kỹ thuật.',
+  'ABS-GF': 'ABS gia cường sợi thủy tinh: cứng vững, chịu nhiệt cao, ổn định kích thước. Hợp chi tiết kỹ thuật cần chịu lực.',
+  // TPU theo độ cứng Shore: số càng nhỏ càng mềm.
+  'TPU 85A': 'TPU mềm (85A): rất dẻo, đàn hồi như cao su mềm, êm tay. Hợp gioăng, đệm, tay cầm. Khó in nhất trong các loại TPU, in chậm.',
+  'TPU 90A': 'TPU mềm vừa (90A): dẻo dai, đàn hồi tốt, cân bằng giữa mềm và chắc. Hợp ốp bảo vệ, dây đeo, chân đế chống trượt.',
+  'TPU 95A': 'TPU (95A): dẻo dai, chống mài mòn và va đập tốt, dễ in nhất trong các loại TPU. Hợp vỏ bảo vệ, đệm, chặn cửa.',
 };
 
 const DEFAULT_SERVICE_NOTES = `Lưu ý dịch vụ in 3D
@@ -132,7 +143,8 @@ export default function App() {
   const [showShowroom, setShowShowroom] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showroomCategory, setShowroomCategory] = useState('PLA');
-  const [quoteCategory, setQuoteCategory] = useState(() => localStorage.getItem('lastQuoteCategory') || 'PLA');
+  // Loại cũ đã lưu (vd. "TPU") tự về loại mới gần nhất ("TPU 95A").
+  const [quoteCategory, setQuoteCategory] = useState(() => chuanLoai(localStorage.getItem('lastQuoteCategory') || 'PLA'));
 
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -242,7 +254,7 @@ export default function App() {
       setParams(p => {
         const current = finalItems.find(m => m.id === p.materialId);
         if (!p.materialId || !current) {
-          const firstInCat = finalItems.find(m => (m.category || 'PLA') === quoteCategoryRef.current);
+          const firstInCat = finalItems.find(m => chuanLoai(m.category) === quoteCategoryRef.current);
           if (firstInCat) return { ...p, materialId: firstInCat.id };
         }
         return p;
@@ -507,7 +519,9 @@ export default function App() {
     return searchMatch && stockMatch;
   }), [materials, inventorySearch, inventoryStockFilter]);
 
-  const categoryMaterials = materials.filter(m => (m.category || 'PLA') === quoteCategory);
+  // So bằng chuanLoai: vật liệu còn loại cũ ("TPU", "PETG CF"...) vẫn hiện đúng chỗ.
+  const categoryMaterials = materials.filter(m => chuanLoai(m.category) === quoteCategory);
+  const demLoai = (loai: string) => materials.filter(m => chuanLoai(m.category) === loai).length;
   const serviceNotes = systemSettings.serviceNotes || DEFAULT_SERVICE_NOTES;
 
   /* ==========================================================================
@@ -643,28 +657,24 @@ export default function App() {
                 <div className="space-y-4 sm:space-y-5">
                   <Card title="Vật liệu" icon={<Layers size={13} />}>
                     <div className="space-y-3.5">
-                      <div className="grid grid-cols-2 gap-3">
-                        <Field label="Loại nhựa">
-                          <Select
-                            value={quoteCategory}
-                            onChange={e => {
-                              const cat = e.target.value;
-                              setQuoteCategory(cat);
-                              const first = materials.find(m => (m.category || 'PLA') === cat);
-                              if (first) setParams(p => ({ ...p, materialId: first.id }));
-                            }}
-                          >
-                            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                          </Select>
-                        </Field>
-                        <Field label="Giá nhựa / kg">
-                          <div className="w-full bg-brand-soft border border-line rounded-xl px-3.5 py-2.5 text-sm font-black text-brand truncate">
-                            {formatCurrency(selectedMaterial?.pricePerKg || 0)}
-                          </div>
-                        </Field>
-                      </div>
+                      <Field label="Loại nhựa" hint={quoteCategory}>
+                        <ChonLoaiNhua
+                          value={quoteCategory}
+                          dem={demLoai}
+                          onChange={cat => {
+                            setQuoteCategory(cat);
+                            const first = materials.find(m => chuanLoai(m.category) === cat);
+                            if (first) setParams(p => ({ ...p, materialId: first.id }));
+                          }}
+                        />
+                      </Field>
 
-                      <Field label="Cuộn nhựa trong kho" hint={`${categoryMaterials.length} loại`}>
+                      <Field
+                        label="Cuộn nhựa trong kho"
+                        hint={selectedMaterial
+                          ? <span className="text-brand font-black">{formatCurrency(selectedMaterial.pricePerKg || 0)}/kg</span>
+                          : `${categoryMaterials.length} loại`}
+                      >
                         <MaterialPicker
                           materials={categoryMaterials}
                           value={params.materialId}
@@ -840,7 +850,7 @@ export default function App() {
                         active={params.materialId === m.id}
                         onClick={() => {
                           if (m.inStock === false) return;
-                          setQuoteCategory(m.category || 'PLA');
+                          setQuoteCategory(chuanLoai(m.category));
                           setParams(p => ({ ...p, materialId: m.id }));
                         }}
                       />
@@ -1104,14 +1114,15 @@ export default function App() {
 
             <div className="shrink-0 px-4 sm:px-6 py-3 overflow-x-auto no-scrollbar border-b border-line bg-surface">
               <div className="flex gap-2 w-max">
-                {CATEGORIES.map(cat => (
+                {/* Showroom: tab theo nhóm (PLA, PETG...), mỗi thẻ ghi rõ biến thể (PETG-CF, TPU 95A...). */}
+                {NHOM_NHUA.map(n => (
                   <Button
-                    key={cat}
+                    key={n.goc}
                     size="sm"
-                    variant={showroomCategory === cat ? 'brand' : 'plain'}
-                    onClick={() => setShowroomCategory(cat)}
+                    variant={showroomCategory === n.goc ? 'brand' : 'plain'}
+                    onClick={() => setShowroomCategory(n.goc)}
                   >
-                    {cat}
+                    {n.goc}
                   </Button>
                 ))}
               </div>
@@ -1127,13 +1138,13 @@ export default function App() {
                   <div className="text-right">
                     <p className="text-2xs font-black text-ink-soft uppercase tracking-[0.16em]">Tổng số</p>
                     <p className="text-2xl font-black text-brand">
-                      {materials.filter(m => (m.category || 'PLA') === showroomCategory).length} mẫu
+                      {materials.filter(m => nhomCua(m.category).goc === showroomCategory).length} mẫu
                     </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                  {materials.filter(m => (m.category || 'PLA') === showroomCategory).map((m, i) => (
+                  {materials.filter(m => nhomCua(m.category).goc === showroomCategory).map((m, i) => (
                     <motion.div
                       key={m.id}
                       initial={{ opacity: 0, y: 24, scale: 0.96 }}
@@ -1170,7 +1181,7 @@ export default function App() {
                   ))}
                 </div>
 
-                {materials.filter(m => (m.category || 'PLA') === showroomCategory).length === 0 && (
+                {materials.filter(m => nhomCua(m.category).goc === showroomCategory).length === 0 && (
                   <Empty icon={<Box size={56} strokeWidth={1} />} title="Chưa có nhựa trong danh mục này" />
                 )}
               </div>
@@ -1331,9 +1342,13 @@ function MaterialCard({
 
       <div className="p-3.5 space-y-2.5">
         <div className="flex gap-2">
-          <Field label="Loại" className="shrink-0 w-[92px]">
-            <Select value={m.category || 'PLA'} onChange={e => onUpdate({ category: e.target.value })} className="!py-2 !text-xs !font-black uppercase">
-              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+          <Field label="Loại" className="shrink-0 w-[108px]">
+            <Select value={chuanLoai(m.category)} onChange={e => onUpdate({ category: e.target.value })} className="!py-2 !text-xs !font-black uppercase">
+              {NHOM_NHUA.map(n => (
+                <optgroup key={n.goc} label={n.goc}>
+                  {n.bien.map(b => <option key={b.ma} value={b.ma}>{b.ma}</option>)}
+                </optgroup>
+              ))}
             </Select>
           </Field>
           <Field label="Hãng" className="flex-1 min-w-0">

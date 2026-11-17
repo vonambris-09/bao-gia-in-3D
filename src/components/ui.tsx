@@ -56,7 +56,7 @@ export function Card({
 
 export function Field({
   label, children, hint, className,
-}: { label: string; children: ReactNode; hint?: string; className?: string }) {
+}: { label: string; children: ReactNode; hint?: ReactNode; className?: string }) {
   return (
     <label className={cn('block space-y-2', className)}>
       <span className="text-2xs font-bold text-ink-soft px-0.5 flex items-center justify-between gap-2">
@@ -145,13 +145,15 @@ export function Button({ variant = 'plain', size = 'md', icon, children, classNa
    ========================================================================== */
 
 export function Segmented<T extends string>({
-  value, onChange, options, layoutId, className,
+  value, onChange, options, layoutId, className, compact = false,
 }: {
   value: T;
   onChange: (v: T) => void;
   options: { value: T; label: string; icon?: ReactNode }[];
   layoutId: string;
   className?: string;
+  /** Nhiều lựa chọn trong ô hẹp (vd. 5 nhóm nhựa): bớt lề hai bên mỗi nút. */
+  compact?: boolean;
 }) {
   return (
     <div className={cn('lit inline-flex bg-surface-2 border border-line rounded-xl p-1 gap-1', className)}>
@@ -165,7 +167,7 @@ export function Segmented<T extends string>({
             transition={spring}
             className={cn(
               'relative flex-1 inline-flex items-center justify-center gap-2 font-bold rounded-lg',
-              'px-4 py-2 text-xs whitespace-nowrap',
+              compact ? 'px-1.5 py-2 text-xs whitespace-nowrap min-w-0' : 'px-4 py-2 text-xs whitespace-nowrap',
               active ? 'text-brand-ink' : 'text-ink-soft'
             )}
           >
